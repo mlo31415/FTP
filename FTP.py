@@ -5,7 +5,6 @@ import ftplib
 import json
 import os
 import tempfile
-from datetime import datetime
 
 from Log import Log, LogFlush
 
@@ -20,6 +19,10 @@ class FTP:
         with open(cre) as f:
             FTP.g_credentials=json.loads(f.read())
         return self.Reconnect()     # Not exactly a reconnect, but close enough...
+
+    #----------------------------------------------
+    def GetEditor(self) -> str:
+        return FTP.g_credentials["ID"]
 
     # ---------------------------------------------
     # If we get a connection failure, reconnect tries to re-establish the connection and put the FTP object into a consistent state and then to restore the CWD
