@@ -5,6 +5,7 @@ import ftplib
 import json
 import os
 import tempfile
+import io
 
 from Log import Log, LogFlush
 
@@ -113,7 +114,7 @@ class FTP:
             LogFlush()
             assert False
 
-        if not self.Exists(fname):
+        if not self.FileExists(fname):
             Log("FTP.DeleteFile: '"+fname+"' does not exist.")
             return True
 
@@ -135,7 +136,7 @@ class FTP:
             LogFlush()
             assert False
 
-        if not self.Exists(oldname):
+        if not self.FileExists(oldname):
             Log("FTP.Rename: '"+oldname+"' does not exist.")
             return False
 
@@ -161,7 +162,7 @@ class FTP:
             Log("FTP.DeleteDir: Attempt to delete root -- forbidden")
             assert False
 
-        if not self.Exists(dirname):
+        if not self.FileExists(dirname):
             Log("FTP.DeleteDir: '"+dirname+"' does not exist.")
             return True
 
@@ -194,8 +195,20 @@ class FTP:
 
         return dir
 
+
     # ---------------------------------------------
-    def Exists(self, filedir: str) -> bool:
+    def PathExists(self, dirPath: str) -> bool:
+        path=dirPath.split("/")
+        if len(path) == 0:
+            return self.FileExists(dirPath)
+
+        dir=path[-1]
+        self.CWD("/".join(path[:-1]))
+        return self.FileExists(dir)
+
+
+    # ---------------------------------------------
+    def FileExists(self, filedir: str) -> bool:
         Log("Does '"+filedir+"' exist?", noNewLine=True)
         if filedir == "/":
             Log("  --> Yes, it always exists")
@@ -210,7 +223,7 @@ class FTP:
             Log("'  --> FTP failure: retrying")
             if not self.Reconnect():
                 return False
-            return self.Exists(str)
+            return self.FileExists(filedir)
 
 
     #-------------------------------
@@ -233,7 +246,7 @@ class FTP:
         # Now walk the component list
         for component in components:
             # Does the directory exist?
-            if not self.Exists(component):
+            if not self.FileExists(component):
                 # If not, are we allowed to create it"
                 if not Create:
                     Log("SetDirectory was called for a non-existant directory with create=False")
@@ -306,11 +319,60 @@ class FTP:
         return FTP().PutString(fname, s)
 
 
+    # Return True if a message is recognized as an FTP success message; False otherwise
+    def IsSuccess(self, ret: str) -> bool:
+        successMessages=[
+            "226-File successfully transferred",
+        ]
+        ret=ret.split("\n")[0]      # Just want the 1st line if there are many
+        return any([x == ret for x in successMessages])
+
+
+    #-------------------------------
+    # Copy a file from one directory on the the server to another
+    def CopyFile(self, oldpathname: str, newpathname: str, filename: str) -> bool:
+        if self.g_ftp is None:
+            Log("FTP.CopyFile: FTP not initialized", isError=True)
+            return False
+
+        # The lambda callback in retrbinary will accumulate bytes here
+        temp: bytearray=bytearray(0)
+
+        Log("RETR "+filename+"  from "+oldpathname)
+        try:
+            ret=self.g_ftp.retrbinary("RETR "+filename, lambda data: temp.extend(data))
+            Log(ret)
+        except Exception as e:
+            Log("FTP.CopyFile: FTP connection failure. Exception="+str(e), isError=True)
+            if not self.Reconnect():
+                return False
+            ret=self.g_ftp.retrbinary("RETR "+filename, lambda data: temp.extend(data))
+            Log(ret)
+
+        if not self.IsSuccess(ret):
+            Log(ret, isError=True)
+            Log("FTP.CopyFile: retrbinary failed", isError=True)
+
+        # Write upload the file we just downloaded to the new directory
+        # The new directory must already have been created
+        if not self.PathExists(newpathname):
+            Log("FTP.CopyFile: newpathname '"+newpathname+"' not found", isError=True)
+            return False
+
+        self.CWD(newpathname)
+        try:
+            Log(self.g_ftp.storbinary("STOR "+filename, io.BytesIO(temp)))
+        except Exception as e:
+            Log("FTP.PutFile: FTP connection failure. Exception="+str(e))
+            if not self.Reconnect():
+                return False
+            Log(self.g_ftp.storbinary("STOR "+filename, f))
+
     #-------------------------------
     # Copy the local file fname to fanac.org in the current directory and with the same name
     def PutFile(self, pathname: str, toname: str) -> bool:
         if self.g_ftp is None:
-            Log("FTP not initialized")
+            Log("FTP.PutFile: FTP not initialized")
             return False
 
         Log("STOR "+toname+"  from "+pathname)
@@ -319,7 +381,7 @@ class FTP:
                 try:
                     Log(self.g_ftp.storbinary("STOR "+toname, f))
                 except Exception as e:
-                    Log("FTP connection failure. Exception="+str(e))
+                    Log("FTP.PutFile: FTP connection failure. Exception="+str(e))
                     if not self.Reconnect():
                         return False
                     Log(self.g_ftp.storbinary("STOR "+toname, f))
@@ -338,7 +400,7 @@ class FTP:
 
         fd=tempfile.TemporaryDirectory()
         Log("RETR "+fname+"  to "+fd.name)
-        if not self.Exists(fname):
+        if not self.FileExists(fname):
             Log(fname+" does not exist.")
             fd.cleanup()
             return None
@@ -376,3 +438,16 @@ class FTP:
             Log("Could not load "+directory+"/"+fname)
         return s
 
+
+
+    #-------------------------------
+    def Nlst(self, directory: str) -> Optional[List[str]]:
+        if self.g_ftp is None:
+            Log("FTP not initialized")
+            return None
+
+        if not self.SetDirectory(directory):
+            Log("FTP.Dir: Bailing out...")
+            return None
+
+        return self.g_ftp.nlst()
