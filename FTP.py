@@ -372,6 +372,7 @@ class FTP:
             if not self.Reconnect():
                 return False
             Log(self.g_ftp.storbinary("STOR "+filename, f))
+        return True
 
     #-------------------------------
     # Copy the local file fname to fanac.org in the current directory and with the same name
