@@ -335,6 +335,11 @@ class FTP:
             Log("FTP.CopyFile: FTP not initialized", isError=True)
             return False
 
+        if not self.PathExists(oldpathname):
+            Log("FTP.CopyFile: oldpathname '"+oldpathname+"' not found", isError=True)
+            return False
+        self.CWD(oldpathname)
+
         # The lambda callback in retrbinary will accumulate bytes here
         temp: bytearray=bytearray(0)
 
@@ -358,8 +363,8 @@ class FTP:
         if not self.PathExists(newpathname):
             Log("FTP.CopyFile: newpathname '"+newpathname+"' not found", isError=True)
             return False
-
         self.CWD(newpathname)
+
         try:
             Log(self.g_ftp.storbinary("STOR "+filename, io.BytesIO(temp)))
         except Exception as e:
