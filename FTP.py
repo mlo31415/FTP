@@ -166,6 +166,11 @@ class FTP:
             Log("FTP.DeleteDir: '"+dirname+"' does not exist.")
             return True
 
+        # The first step is to delete any files it contains
+        files=self.Nlst(dirname)
+        for file in files:
+            self.DeleteFile(file)
+
         try:
             msg=self.g_ftp.rmd(dirname)
         except Exception as e:
