@@ -447,13 +447,13 @@ class FTP:
 
 
     #-------------------------------
-    def Nlst(self, directory: str) -> Optional[List[str]]:
+    def Nlst(self, directory: str) -> List[str]:
         if self.g_ftp is None:
-            Log("FTP not initialized")
-            return None
+            Log("FTP.Nlst: FTP not initialized")
+            return []
 
         if not self.SetDirectory(directory):
-            Log("FTP.Dir: Bailing out...")
-            return None
+            Log("FTP.Nlst: Bailing out...")
+            return []
 
-        return self.g_ftp.nlst()
+        return [x for x in self.g_ftp.nlst() if x != "." and x != ".."] # Ignore the . and .. elements
