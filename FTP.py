@@ -242,6 +242,11 @@ class FTP:
         if newdir is None or len(newdir) == 0:
             return True
 
+        # If we've been given an absolte path and we're already there, return
+        if newdir[0] == "/" and newdir == self.g_curdirpath:
+            Log("SetDirectory: already there with an absolute path")
+            return True
+
         components=[]
         if newdir[0] == "/":
             components.append("/")
