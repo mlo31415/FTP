@@ -52,7 +52,7 @@ class FTP:
 
     # ---------------------------------------------
     # Update the saved current working directory path
-    # If the input is an absolute path, just use if (removing any trailing filename)
+    # If the input is an absolute path, just use it (removing any trailing filename)
     # If it's a relative move, compute the new wd path
     def UpdateCurpath(self, newdir: str) -> None:
         Log("UpdateCurpath from "+FTP.g_curdirpath+"  with cwd('"+newdir+"')")
