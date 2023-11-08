@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Dict, List
+from typing import Optional
 
 import ftplib
 import json
@@ -13,7 +13,7 @@ from Log import Log, LogFlush
 class FTP:
     g_ftp: ftplib.FTP=None      # A single FTP link for all instances of the class
     g_curdirpath: str="/"
-    g_credentials: Dict={}      # Saves the credentials for reconnection if the server times out
+    g_credentials: dict={}      # Saves the credentials for reconnection if the server times out
 
     # ---------------------------------------------
     def OpenConnection(self, cre: str) -> bool:
@@ -453,7 +453,7 @@ class FTP:
 
 
     #-------------------------------
-    def Nlst(self, directory: str) -> List[str]:
+    def Nlst(self, directory: str) -> list[str]:
         if self.g_ftp is None:
             Log("FTP.Nlst: FTP not initialized")
             return []
