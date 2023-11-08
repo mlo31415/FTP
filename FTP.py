@@ -367,14 +367,14 @@ class FTP:
         # Write upload the file we just downloaded to the new directory
         # The new directory must already have been created
         if not self.PathExists(newpathname):
-            Log("FTP.CopyFile: newpathname '"+newpathname+"' not found", isError=True)
+            Log(f"FTP.CopyFile: newpathname='{newpathname}' not found", isError=True)
             return False
         self.CWD(newpathname)
 
         try:
             Log(self.g_ftp.storbinary("STOR "+filename, io.BytesIO(temp)))
         except Exception as e:
-            Log("FTP.PutFile: FTP connection failure. Exception="+str(e))
+            Log(f"FTP.PutFile: FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             Log(self.g_ftp.storbinary("STOR "+filename, f))
@@ -398,7 +398,7 @@ class FTP:
                         return False
                     Log(self.g_ftp.storbinary("STOR "+toname, f))
         except Exception as e:
-            Log("FTP.PutFile: Exception on Open("+pathname+" 'rb') ")
+            Log(f"FTP.PutFile: Exception on Open('{pathname}', 'rb') ")
             Log(str(e))
         return True
 
@@ -413,7 +413,7 @@ class FTP:
         fd=tempfile.TemporaryDirectory()
         Log("RETR "+fname+"  to "+fd.name)
         if not self.FileExists(fname):
-            Log(fname+" does not exist.")
+            Log(f"{fname} does not exist.")
             fd.cleanup()
             return None
         # Download the file into the temporary file
@@ -422,7 +422,7 @@ class FTP:
         try:
             msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
         except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
+            Log(f"FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 fd.cleanup()
                 return None
@@ -447,7 +447,7 @@ class FTP:
             return None
         s=FTP().GetAsString(fname)
         if s is None:
-            Log("Could not load "+directory+"/"+fname)
+            Log(f"Could not load {directory}/{fname}")
         return s
 
 
