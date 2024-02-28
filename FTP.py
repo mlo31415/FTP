@@ -219,6 +219,16 @@ class FTP:
         if filedir == "/":
             Log("  --> Yes, it always exists")
             return True     # "/" always exists
+
+        # Split the filedir into path+file
+        path=""
+        if "/" in filedir:
+            path="/".join(filedir.split("/")[:-1])
+            filedir=filedir.split("/")[-1]
+        # Make sure we're at the path
+        if len(path) > 0:
+            self.CWD(path)
+
         try:
             if filedir in self.g_ftp.nlst():
                 Log("  --> yes")
