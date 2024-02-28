@@ -16,8 +16,8 @@ class FTP:
     g_credentials: dict={}      # Saves the credentials for reconnection if the server times out
 
     # ---------------------------------------------
-    def OpenConnection(self, cre: str) -> bool:
-        with open(cre) as f:
+    def OpenConnection(self, credentialsFilePath: str) -> bool:
+        with open(credentialsFilePath) as f:
             FTP.g_credentials=json.loads(f.read())
         return self.Reconnect()     # Not exactly a reconnect, but close enough...
 
