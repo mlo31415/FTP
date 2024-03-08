@@ -357,22 +357,22 @@ class FTP:
             return False
 
         if not self.PathExists(oldpathname):
-            Log("FTP.CopyFile: oldpathname '"+oldpathname+"' not found", isError=True)
+            Log(f"FTP.CopyFile: oldpathname '{oldpathname}' not found", isError=True)
             return False
         self.CWD(oldpathname)
 
         # The lambda callback in retrbinary will accumulate bytes here
         temp: bytearray=bytearray(0)
 
-        Log("RETR "+filename+"  from "+oldpathname)
+        Log(f"RETR {filename}  from {oldpathname}")
         try:
-            ret=self.g_ftp.retrbinary("RETR "+filename, lambda data: temp.extend(data))
+            ret=self.g_ftp.retrbinary(f"RETR {filename}", lambda data: temp.extend(data))
             Log(ret)
         except Exception as e:
-            Log("FTP.CopyFile: FTP connection failure. Exception="+str(e), isError=True)
+            Log(f"FTP.CopyFile: FTP connection failure. Exception={e}", isError=True)
             if not self.Reconnect():
                 return False
-            ret=self.g_ftp.retrbinary("RETR "+filename, lambda data: temp.extend(data))
+            ret=self.g_ftp.retrbinary(f"RETR {filename}", lambda data: temp.extend(data))
             Log(ret)
 
         if not self.IsSuccess(ret):
@@ -387,13 +387,64 @@ class FTP:
         self.CWD(newpathname)
 
         try:
-            Log(self.g_ftp.storbinary("STOR "+filename, io.BytesIO(temp)))
+            Log(self.g_ftp.storbinary(f"STOR {filename}", io.BytesIO(temp)))
         except Exception as e:
             Log(f"FTP.PutFile: FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
-            Log(self.g_ftp.storbinary("STOR "+filename, f))
+            ret=self.g_ftp.storbinary(f"STOR {filename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
+            Log(ret)
         return True
+
+
+    #-------------------------------
+    # Copy a file from one directory on the server to another while renaming the file
+    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str) -> bool:
+        if self.g_ftp is None:
+            Log("FTP.CopyFile: FTP not initialized", isError=True)
+            return False
+
+        if not self.PathExists(oldpathname):
+            Log(f"FTP.CopyFile: oldpathname '{oldpathname}' not found", isError=True)
+            return False
+        self.CWD(oldpathname)
+
+        # The lambda callback in retrbinary will accumulate bytes here
+        temp: bytearray=bytearray(0)
+
+        Log(f"RETR {oldfilename} from {oldpathname}")
+        try:
+            ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
+            Log(ret)
+        except Exception as e:
+            Log(f"FTP.CopyFile: FTP connection failure. Exception={e}", isError=True)
+            if not self.Reconnect():
+                return False
+            ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
+            Log(ret)
+
+        if not self.IsSuccess(ret):
+            Log(ret, isError=True)
+            Log("FTP.CopyFile: retrbinary failed", isError=True)
+
+        # Write upload the file we just downloaded to the new directory
+        # The new directory must already have been created
+        if not self.PathExists(newpathname):
+            Log(f"FTP.CopyFile: newpathname='{newpathname}' not found", isError=True)
+            return False
+        self.CWD(newpathname)
+
+        try:
+            ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
+            Log(ret)
+        except Exception as e:
+            Log(f"FTP.PutFile: FTP connection failure. Exception={e}")
+            if not self.Reconnect():
+                return False
+            ret=self.g_ftp.storbinary(f"STOR {newfilename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
+            Log(ret)
+        return True
+
 
     #-------------------------------
     # Copy the local file fname to fanac.org in the current directory and with the same name
