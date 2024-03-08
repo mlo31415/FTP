@@ -14,6 +14,7 @@ class FTP:
     g_ftp: ftplib.FTP=None      # A single FTP link for all instances of the class
     g_curdirpath: str="/"
     g_credentials: dict={}      # Saves the credentials for reconnection if the server times out
+    g_dologging: bool=True
 
     # ---------------------------------------------
     def OpenConnection(self, credentialsFilePath: str) -> bool:
@@ -25,25 +26,30 @@ class FTP:
     def GetEditor(self) -> str:
         return FTP.g_credentials["ID"]
 
+
+    def Log(self, s: str):
+        if self.g_dologging:
+            Log(s)
+
     # ---------------------------------------------
     # If we get a connection failure, reconnect tries to re-establish the connection and put the FTP object into a consistent state and then to restore the CWD
     def Reconnect(self) -> bool:
-        Log("Reconnect")
+        self.Log("Reconnect")
         if len(FTP.g_credentials) == 0:
             return False
         FTP.g_ftp=ftplib.FTP_TLS(host=FTP.g_credentials["host"], user=FTP.g_credentials["ID"], passwd=FTP.g_credentials["PW"])
         FTP.g_ftp.prot_p()
 
         # Now we need to restore the current working directory
-        Log("Reconnect: g_ftp.cwd('/')")
+        self.Log("Reconnect: g_ftp.cwd('/')")
         msg=self.g_ftp.cwd("/")
-        Log(msg)
+        self.Log(msg)
         ret=msg.startswith("250 OK.")
         if not ret:
-            Log("Reconnect failed")
+            Log("FTP.Reconnect failed")
             return False
 
-        Log("Reconnect: successful. Change directory to "+FTP.g_curdirpath)
+        self.Log("Reconnect: successful. Change directory to "+FTP.g_curdirpath)
         olddir=FTP.g_curdirpath
         FTP.g_curdirpath="/"
         self.SetDirectory(olddir)
@@ -55,7 +61,7 @@ class FTP:
     # If the input is an absolute path, just use it (removing any trailing filename)
     # If it's a relative move, compute the new wd path
     def UpdateCurpath(self, newdir: str) -> None:
-        Log("UpdateCurpath from "+FTP.g_curdirpath+"  with cwd('"+newdir+"')")
+        self.Log("UpdateCurpath from "+FTP.g_curdirpath+"  with cwd('"+newdir+"')")
         if newdir[0] == "/":    # Absolute directory move
             FTP.g_curdirpath=newdir
         elif newdir == "..":    # Relative move up one directory
@@ -74,20 +80,20 @@ class FTP:
     #---------------------------------------------
     def CWD(self, newdir: str) -> bool:
         wd=self.PWD()
-        Log("**CWD from '"+wd+"' to '"+newdir+"'")
+        self.Log("**CWD from '"+wd+"' to '"+newdir+"'")
         if wd == newdir:
-            Log("  Already there!")
+            self.Log("  Already there!")
             return True
 
         try:
             msg=self.g_ftp.cwd(newdir)
         except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
+            self.Log("FTP.CWD(): FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.cwd(newdir)
 
-        Log(msg)
+        self.Log(msg)
         ret=msg.startswith("250 OK.")
         if ret:
             self.UpdateCurpath(newdir)
@@ -96,22 +102,22 @@ class FTP:
 
     # ---------------------------------------------
     def MKD(self, newdir: str) -> bool:
-        Log("**make directory: '"+newdir+"'")
+        self.Log("**make directory: '"+newdir+"'")
         try:
             msg=self.g_ftp.mkd(newdir)
         except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
+            Log("FTP.MKD(): FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.mkd(newdir)
-        Log(msg+"\n")
+        self.Log(msg+"\n")
         return msg == newdir or msg.startswith("250 ") or msg.startswith("257 ")     # Web doc shows all three as possible.
 
     # ---------------------------------------------
     def DeleteFile(self, fname: str) -> bool:
-        Log("**delete file: '"+fname+"'")
+        self.Log("**delete file: '"+fname+"'")
         if len(fname.strip()) == 0:
-            Log("FTP.DeleteFile: filename not supplied.")
+            Log("FTP.DeleteFile(): filename not supplied.")
             LogFlush()
             assert False
 
@@ -126,14 +132,14 @@ class FTP:
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.delete(fname)
-        Log(msg+"\n")
+        self.Log(msg+"\n")
         return msg.startswith("250 ")
 
     # ---------------------------------------------
     def Rename(self, oldname: str, newname: str) -> bool:
-        Log("**rename file: '"+oldname+"'  as  '"+newname+"'")
+        self.Log("**rename file: '"+oldname+"'  as  '"+newname+"'")
         if len(oldname.strip()) == 0 or len(newname.strip()) == 0:
-            Log("FTP.Rename: oldname or newname not supplied.")
+            Log("FTP.Rename(): oldname or newname not supplied.")
             LogFlush()
             assert False
 
@@ -144,27 +150,27 @@ class FTP:
         try:
             msg=self.g_ftp.rename(oldname, newname)
         except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
+            Log("FTP.Rename: FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.rename(oldname, newname)
-        Log(msg+"\n")
+        self.Log(msg+"\n")
         return msg.startswith("250 ")
 
     # ---------------------------------------------
     # Note that this does not delete recursively.
     def DeleteDir(self, dirname: str) -> bool:
-        Log("**delete directory: '"+dirname+"'")
+        self.Log("**delete directory: '"+dirname+"'")
         if len(dirname.strip()) == 0:
-            Log("FTP.DeleteDir: dirname not supplied.")
+            Log("FTP.DeleteDir(): dirname not supplied.")
             LogFlush()
             assert False        # This should never happen.
         if dirname == "/":
-            Log("FTP.DeleteDir: Attempt to delete root -- forbidden")
+            Log("FTP.DeleteDir(): Attempt to delete root -- forbidden")
             assert False
 
         if not self.FileExists(dirname):
-            Log("FTP.DeleteDir: '"+dirname+"' does not exist.")
+            Log(f"FTP.DeleteDir(): '{dirname}' does not exist.")
             return True
 
         # The first step is to delete any files it contains
@@ -175,11 +181,11 @@ class FTP:
         try:
             msg=self.g_ftp.rmd(dirname)
         except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
+            Log(f"FTP.DeleteDir(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.rmd(dirname)
-        Log(msg+"\n")
+        self.Log(msg+"\n")
         return msg.startswith("250 ")
 
     # ---------------------------------------------
@@ -187,16 +193,16 @@ class FTP:
         try:
             dir=self.g_ftp.pwd()
         except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
+            Log("FTP.PWD(): FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
                 return False
             dir=self.g_ftp.pwd()
-        Log("pwd is '"+dir+"'")
+        self.Log("pwd is '"+dir+"'")
 
         # Check to see if this matches what self._curdirpath thinks it ought to
         _, tail=os.path.split(FTP.g_curdirpath)
         if FTP.g_curdirpath != dir and tail != dir:
-            Log("PWD: error detected -- self._curdirpath='"+FTP.g_curdirpath+"' and pwd returns '"+dir+"'")
+            Log("FTP.PWD(): error detected -- self._curdirpath='"+FTP.g_curdirpath+"' and pwd returns '"+dir+"'")
             assert False
 
         return dir
@@ -215,9 +221,10 @@ class FTP:
 
     # ---------------------------------------------
     def FileExists(self, filedir: str) -> bool:
-        Log("Does '"+filedir+"' exist?", noNewLine=True)
+        if self.g_dologging:
+            Log("Does '"+filedir+"' exist?", noNewLine=True)
         if filedir == "/":
-            Log("  --> Yes, it always exists")
+            self.Log("  --> Yes, it always exists")
             return True     # "/" always exists
 
         # Split the filedir into path+file
@@ -231,12 +238,12 @@ class FTP:
 
         try:
             if filedir in self.g_ftp.nlst():
-                Log("  --> yes")
+                self.Log("  --> yes")
                 return True
-            Log("'  --> no, it does not exist")
+            self.Log("'  --> no, it does not exist")
             return False
         except:
-            Log("'  --> FTP failure: retrying")
+            Log("'FTP.FileExists(): FTP failure: retrying")
             if not self.Reconnect():
                 return False
             return self.FileExists(filedir)
@@ -246,7 +253,7 @@ class FTP:
     # Setting Create=True allows the creation of new directories as needed
     # Newdir can be a whole path starting with "/" or a path relative to the current directory if it doesn't starts with a "/"
     def SetDirectory(self, newdir: str, Create: bool=False) -> bool:
-        Log("**SetDirectory: "+newdir)
+        self.Log("**SetDirectory: "+newdir)
 
         # Split newdir into components
         if newdir is None or len(newdir) == 0:
@@ -254,7 +261,7 @@ class FTP:
 
         # If we've been given an absolte path and we're already there, return
         if newdir[0] == "/" and newdir == self.g_curdirpath:
-            Log("SetDirectory: already there with an absolute path")
+            self.Log("SetDirectory: already there with an absolute path")
             return True
 
         components=[]
@@ -270,15 +277,15 @@ class FTP:
             if not self.FileExists(component):
                 # If not, are we allowed to create it"
                 if not Create:
-                    Log("SetDirectory was called for a non-existant directory with create=False")
+                    Log("FTP.SetDirectory(): called for a non-existant directory with create=False")
                     return False
                 if not self.MKD(component):
-                    Log("mkd failed...bailing out...")
+                    Log("FTP.SetDirectory(): mkd failed...bailing out...")
                     return False
 
             # Now cwd to it.
             if not self.CWD(component):
-                Log("cwd failed...bailing out...")
+                Log("FTP.SetDirectory(): cwd failed...bailing out...")
                 return False
 
         return True
@@ -288,7 +295,7 @@ class FTP:
     # Copy the string to fanac.org in the current directory as fname
     def PutString(self, fname: str, s: str) -> bool:
         if self.g_ftp is None:
-            Log("FTP not initialized")
+            Log("FTP.PutString(): FTP not initialized")
             return False
 
         with tempfile.TemporaryFile() as f:
@@ -297,14 +304,14 @@ class FTP:
             f.write(bytes(s, 'utf-8'))
             f.seek(0)
 
-            Log("STOR "+fname+"  from "+f.name)
+            self.Log("STOR "+fname+"  from "+f.name)
             try:
-                Log(self.g_ftp.storbinary("STOR "+fname, f))
+                self.Log(self.g_ftp.storbinary("STOR "+fname, f))
             except Exception as e:
-                Log("FTP connection failure. Exception="+str(e))
+                Log(f"FTP.PutString(): FTP connection failure. Exception={e}")
                 if not self.Reconnect():
                     return False
-                Log(self.g_ftp.storbinary("STOR "+fname, f))
+                self.Log(self.g_ftp.storbinary("STOR "+fname, f))
             return True
 
 
@@ -312,7 +319,7 @@ class FTP:
     # Append the string to file fname on fanac.org in the current directory
     def AppendString(self, fname: str, s: str) -> bool:
         if self.g_ftp is None:
-            Log("FTP not initialized")
+            Log("FTP.AppendString(): FTP not initialized")
             return False
 
         with tempfile.TemporaryFile() as f:
@@ -321,21 +328,21 @@ class FTP:
             f.write(bytes(s, 'utf-8'))
             f.seek(0)
 
-            Log("STOR "+fname+"  from "+f.name)
+            self.Log("STOR "+fname+"  from "+f.name)
             try:
-                Log(self.g_ftp.storbinary("APPE "+fname, f))
+                self.Log(self.g_ftp.storbinary("APPE "+fname, f))
             except Exception as e:
-                Log("FTP connection failure. Exception="+str(e))
+                Log(f"FTP.AppendString(): FTP connection failure. Exception={e}")
                 if not self.Reconnect():
                     return False
-                Log(self.g_ftp.storbinary("APPE "+fname, f))
+                self.Log(self.g_ftp.storbinary("APPE "+fname, f))
             return True
 
 
     #-------------------------------
     def PutFileAsString(self, directory: str, fname: str, s: str, create: bool=False) -> bool:
         if not FTP().SetDirectory(directory, Create=create):
-            Log("PutFieAsString: Bailing out...")
+            Log("FTP.PutFieAsString(): Bailing out...")
             return False
         return FTP().PutString(fname, s)
 
@@ -353,47 +360,47 @@ class FTP:
     # Copy a file from one directory on the the server to another
     def CopyFile(self, oldpathname: str, newpathname: str, filename: str) -> bool:
         if self.g_ftp is None:
-            Log("FTP.CopyFile: FTP not initialized", isError=True)
+            Log("FTP.CopyFile(): FTP not initialized", isError=True)
             return False
 
         if not self.PathExists(oldpathname):
-            Log(f"FTP.CopyFile: oldpathname '{oldpathname}' not found", isError=True)
+            Log(f"FTP.CopyFile(): oldpathname '{oldpathname}' not found", isError=True)
             return False
         self.CWD(oldpathname)
 
         # The lambda callback in retrbinary will accumulate bytes here
         temp: bytearray=bytearray(0)
 
-        Log(f"RETR {filename}  from {oldpathname}")
+        self.Log(f"RETR {filename}  from {oldpathname}")
         try:
             ret=self.g_ftp.retrbinary(f"RETR {filename}", lambda data: temp.extend(data))
-            Log(ret)
+            self.Log(ret)
         except Exception as e:
-            Log(f"FTP.CopyFile: FTP connection failure. Exception={e}", isError=True)
+            Log(f"FTP.CopyFile(): FTP connection failure. Exception={e}", isError=True)
             if not self.Reconnect():
                 return False
             ret=self.g_ftp.retrbinary(f"RETR {filename}", lambda data: temp.extend(data))
-            Log(ret)
+            self.Log(ret)
 
         if not self.IsSuccess(ret):
             Log(ret, isError=True)
-            Log("FTP.CopyFile: retrbinary failed", isError=True)
+            Log("FTP.CopyFile(): retrbinary failed", isError=True)
 
         # Write upload the file we just downloaded to the new directory
         # The new directory must already have been created
         if not self.PathExists(newpathname):
-            Log(f"FTP.CopyFile: newpathname='{newpathname}' not found", isError=True)
+            Log(f"FTP.CopyFile(): newpathname='{newpathname}' not found", isError=True)
             return False
         self.CWD(newpathname)
 
         try:
-            Log(self.g_ftp.storbinary(f"STOR {filename}", io.BytesIO(temp)))
+            self.Log(self.g_ftp.storbinary(f"STOR {filename}", io.BytesIO(temp)))
         except Exception as e:
-            Log(f"FTP.PutFile: FTP connection failure. Exception={e}")
+            Log(f"FTP.PutFile(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             ret=self.g_ftp.storbinary(f"STOR {filename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
-            Log(ret)
+            self.Log(ret)
         return True
 
 
@@ -401,48 +408,49 @@ class FTP:
     # Copy a file from one directory on the server to another while renaming the file
     def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str) -> bool:
         if self.g_ftp is None:
-            Log("FTP.CopyFile: FTP not initialized", isError=True)
+            Log("FTP.CopyFile(): FTP not initialized", isError=True)
             return False
 
         if not self.PathExists(oldpathname):
-            Log(f"FTP.CopyFile: oldpathname '{oldpathname}' not found", isError=True)
+            Log(f"FTP.CopyFile(): oldpathname '{oldpathname}' not found", isError=True)
             return False
         self.CWD(oldpathname)
 
         # The lambda callback in retrbinary will accumulate bytes here
         temp: bytearray=bytearray(0)
 
-        Log(f"RETR {oldfilename} from {oldpathname}")
+        self.Log(f"RETR {oldfilename} from {oldpathname}")
         try:
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
-            Log(ret)
+            self.Log(ret)
         except Exception as e:
-            Log(f"FTP.CopyFile: FTP connection failure. Exception={e}", isError=True)
+            Log(ret)
+            Log(f"FTP.CopyFile(): FTP connection failure. Exception={e}", isError=True)
             if not self.Reconnect():
                 return False
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
-            Log(ret)
+            self.Log(ret)
 
         if not self.IsSuccess(ret):
             Log(ret, isError=True)
-            Log("FTP.CopyFile: retrbinary failed", isError=True)
+            Log("FTP.CopyFile(): retrbinary failed", isError=True)
 
         # Write upload the file we just downloaded to the new directory
         # The new directory must already have been created
         if not self.PathExists(newpathname):
-            Log(f"FTP.CopyFile: newpathname='{newpathname}' not found", isError=True)
+            Log(f"FTP.CopyFile(): newpathname='{newpathname}' not found", isError=True)
             return False
         self.CWD(newpathname)
 
         try:
             ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
-            Log(ret)
+            self.Log(ret)
         except Exception as e:
-            Log(f"FTP.PutFile: FTP connection failure. Exception={e}")
+            Log(f"FTP.PutFile(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             ret=self.g_ftp.storbinary(f"STOR {newfilename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
-            Log(ret)
+            self.Log(ret)
         return True
 
 
@@ -450,21 +458,21 @@ class FTP:
     # Copy the local file fname to fanac.org in the current directory and with the same name
     def PutFile(self, pathname: str, toname: str) -> bool:
         if self.g_ftp is None:
-            Log("FTP.PutFile: FTP not initialized")
+            Log("FTP.PutFile(): FTP not initialized")
             return False
 
-        Log("STOR "+toname+"  from "+pathname)
+        self.Log("STOR "+toname+"  from "+pathname)
         try:
             with open(pathname, "rb") as f:
                 try:
-                    Log(self.g_ftp.storbinary("STOR "+toname, f))
+                    self.Log(self.g_ftp.storbinary("STOR "+toname, f))
                 except Exception as e:
-                    Log("FTP.PutFile: FTP connection failure. Exception="+str(e))
+                    Log("FTP.PutFile(): FTP connection failure. Exception="+str(e))
                     if not self.Reconnect():
                         return False
-                    Log(self.g_ftp.storbinary("STOR "+toname, f))
+                    self.Log(self.g_ftp.storbinary("STOR "+toname, f))
         except Exception as e:
-            Log(f"FTP.PutFile: Exception on Open('{pathname}', 'rb') ")
+            Log(f"FTP.PutFile(): Exception on Open('{pathname}', 'rb') ")
             Log(str(e))
         return True
 
@@ -473,13 +481,13 @@ class FTP:
     # Download the ascii file named fname in the current directory on fanac.org into a string
     def GetAsString(self, fname: str) -> Optional[str]:
         if self.g_ftp is None:
-            Log("FTP not initialized")
+            Log("FTP.GetAsString(): FTP not initialized")
             return None
 
         fd=tempfile.TemporaryDirectory()
-        Log("RETR "+fname+"  to "+fd.name)
+        self.Log("RETR "+fname+"  to "+fd.name)
         if not self.FileExists(fname):
-            Log(f"{fname} does not exist.")
+            Log(f"FTP.GetAsString(): {fname} does not exist.")
             fd.cleanup()
             return None
         # Download the file into the temporary file
@@ -488,14 +496,14 @@ class FTP:
         try:
             msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
         except Exception as e:
-            Log(f"FTP connection failure. Exception={e}")
+            Log(f"FTP.GetAsString(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 fd.cleanup()
                 return None
             msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
-        Log(msg)
+        self.Log(msg)
         if not msg.startswith("226-File successfully transferred"):
-            Log("GetAsString failed")
+            Log("FTP.GetAsString(): failed")
             fd.cleanup()
             return None
 
@@ -509,11 +517,11 @@ class FTP:
     #-------------------------------
     def GetFileAsString(self, directory: str, fname: str) -> Optional[str]:
         if not self.SetDirectory(directory):
-            Log("GetFileAsString: Bailing out...")
+            Log("GetFileAsString(): Bailing out...")
             return None
         s=FTP().GetAsString(fname)
         if s is None:
-            Log(f"Could not load {directory}/{fname}")
+            Log(f"FTP.GetFileAsString(): Could not load {directory}/{fname}")
         return s
 
 
@@ -521,11 +529,11 @@ class FTP:
     #-------------------------------
     def Nlst(self, directory: str) -> list[str]:
         if self.g_ftp is None:
-            Log("FTP.Nlst: FTP not initialized")
+            Log("FTP.Nlst(): FTP not initialized")
             return []
 
         if not self.SetDirectory(directory):
-            Log("FTP.Nlst: Bailing out...")
+            Log("FTP.Nlst(): Bailing out...")
             return []
 
         return [x for x in self.g_ftp.nlst() if x != "." and x != ".."] # Ignore the . and .. elements
