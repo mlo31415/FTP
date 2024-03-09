@@ -246,6 +246,8 @@ class FTP:
 
         dir=path[-1]
         self.CWD("/".join(path[:-1]))
+        if dir == "":
+            return True
         return self.FileExists(dir)
 
 
