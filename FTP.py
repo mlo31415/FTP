@@ -203,6 +203,18 @@ class FTP:
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
+
+    #----------------------------------------------
+    # Compare two paths for equality.  We ignore differences in trailing "/"
+    def ComparePaths(self, p1: str, p2: str) -> bool:
+        # Make sure that there is a trailing "/" before comparing
+        if len(p1) == 0 or p1[-1] != "/":
+            p1+="/"
+        if len(p2) == 0 or p2[-1] != "/":
+            p2+="/"
+        return p1 == p2
+
+
     # ---------------------------------------------
     # Returns the full path to the current directory as a string
     def PWD(self) -> str:
