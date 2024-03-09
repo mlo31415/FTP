@@ -223,7 +223,7 @@ class FTP:
         except Exception as e:
             Log("FTP.PWD(): FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
-                return False
+                return ""
             dir=self.g_ftp.pwd()
         self.Log("pwd is '"+dir+"'")
 
