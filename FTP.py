@@ -228,8 +228,9 @@ class FTP:
         self.Log("pwd is '"+dir+"'")
 
         # Check to see if this matches what self._curdirpath thinks it ought to
-        _, tail=os.path.split(FTP.g_curdirpath)
-        if FTP.g_curdirpath != dir and tail != dir:
+        lead, tail=os.path.split(FTP.g_curdirpath)
+        Log(f"FTP.PWD(): {lead=}  {tail=}")
+        if not self.ComparePaths(FTP.g_curdirpath,  dir):
             Log("FTP.PWD(): error detected -- self._curdirpath='"+FTP.g_curdirpath+"' and pwd returns '"+dir+"'")
             assert False
 
