@@ -14,7 +14,8 @@ class FTP:
     g_ftp: ftplib.FTP=None      # A single FTP link for all instances of the class
     g_curdirpath: str="/"
     g_credentials: dict={}      # Saves the credentials for reconnection if the server times out
-    g_dologging: bool=True
+    g_dologging: bool=True      # Turn on logging of useful debugging information
+
 
     # ---------------------------------------------
     def OpenConnection(self, credentialsFilePath: str) -> bool:
@@ -22,14 +23,20 @@ class FTP:
             FTP.g_credentials=json.loads(f.read())
         return self.Reconnect()     # Not exactly a reconnect, but close enough...
 
+
     #----------------------------------------------
+    # Get the ID from the FTP login-in credentials
     def GetEditor(self) -> str:
         return FTP.g_credentials["ID"]
 
 
+    #----------------------------------------------
+    # A special Log which only writes when FTP has logging turned on.
+    # Used for debugging messages, b not error messages
     def Log(self, s: str):
         if self.g_dologging:
             Log(s)
+
 
     # ---------------------------------------------
     # If we get a connection failure, reconnect tries to re-establish the connection and put the FTP object into a consistent state and then to restore the CWD
@@ -56,6 +63,7 @@ class FTP:
 
         return True
 
+
     # ---------------------------------------------
     # Update the saved current working directory path
     # If the input is an absolute path, just use it (removing any trailing filename)
@@ -78,6 +86,7 @@ class FTP:
 
 
     #---------------------------------------------
+    # Given a full path "/xxx/yyy/zzz" or a single child directory name (no slashes), change to that directory
     def CWD(self, newdir: str) -> bool:
         wd=self.PWD()
         self.Log("**CWD from '"+wd+"' to '"+newdir+"'")
@@ -100,7 +109,9 @@ class FTP:
         self.PWD()
         return ret
 
+
     # ---------------------------------------------
+    # Make a new child directory named <newdir> in the current dorectory
     def MKD(self, newdir: str) -> bool:
         self.Log("**make directory: '"+newdir+"'")
         try:
@@ -112,6 +123,7 @@ class FTP:
             msg=self.g_ftp.mkd(newdir)
         self.Log(msg+"\n")
         return msg == newdir or msg.startswith("250 ") or msg.startswith("257 ")     # Web doc shows all three as possible.
+
 
     # ---------------------------------------------
     def DeleteFile(self, fname: str) -> bool:
@@ -135,6 +147,7 @@ class FTP:
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
+
     # ---------------------------------------------
     def Rename(self, oldname: str, newname: str) -> bool:
         self.Log("**rename file: '"+oldname+"'  as  '"+newname+"'")
@@ -157,8 +170,10 @@ class FTP:
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
+
     # ---------------------------------------------
-    # Note that this does not delete recursively.
+    # Delete a leaf-node directory and any files and empty directories it contains.
+    # Note that since this does not delete recursively, the contents of any subdirectories must be deleted first.
     def DeleteDir(self, dirname: str) -> bool:
         self.Log("**delete directory: '"+dirname+"'")
         if len(dirname.strip()) == 0:
@@ -189,6 +204,7 @@ class FTP:
         return msg.startswith("250 ")
 
     # ---------------------------------------------
+    # Returns the full path to the current directory as a string
     def PWD(self) -> str:
         try:
             dir=self.g_ftp.pwd()
@@ -209,6 +225,7 @@ class FTP:
 
 
     # ---------------------------------------------
+    # Given a complete path of the form "/xxx/yyy/zzz" (note leading "/"and no trailing "/"), or a relative path of the form "xxx" (note no slashes) does it exist?
     def PathExists(self, dirPath: str) -> bool:
         path=dirPath.split("/")
         if len(path) == 0:
@@ -220,6 +237,7 @@ class FTP:
 
 
     # ---------------------------------------------
+    # Given a filename (possibly includeing a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
         if self.g_dologging:
             Log("Does '"+filedir+"' exist?", noNewLine=True)
@@ -250,8 +268,9 @@ class FTP:
 
 
     #-------------------------------
+    # Make newdir (which may be a full path) the current working directory.  It (and the whole chain leading to it) may optionally be created if it does not exist.
     # Setting Create=True allows the creation of new directories as needed
-    # Newdir can be a whole path starting with "/" or a path relative to the current directory if it doesn't starts with a "/"
+    # Newdir can be a whole path starting with "/" or a path relative to the current directory if it doesn't start with a "/"
     def SetDirectory(self, newdir: str, Create: bool=False) -> bool:
         self.Log("**SetDirectory: "+newdir)
 
@@ -292,7 +311,7 @@ class FTP:
 
 
     #-------------------------------
-    # Copy the string to fanac.org in the current directory as fname
+    # Copy the string s to fanac.org as a file in the current directory named fname.
     def PutString(self, fname: str, s: str) -> bool:
         if self.g_ftp is None:
             Log("FTP.PutString(): FTP not initialized")
@@ -316,7 +335,7 @@ class FTP:
 
 
     #-------------------------------
-    # Append the string to file fname on fanac.org in the current directory
+    # Append the string s to file fname on fanac.org in the current directory
     def AppendString(self, fname: str, s: str) -> bool:
         if self.g_ftp is None:
             Log("FTP.AppendString(): FTP not initialized")
@@ -340,13 +359,14 @@ class FTP:
 
 
     #-------------------------------
+    # Copy the string s to fanac.org as a file <fname> in directory <directory>, creating directories as needed.
     def PutFileAsString(self, directory: str, fname: str, s: str, create: bool=False) -> bool:
         if not FTP().SetDirectory(directory, Create=create):
             Log("FTP.PutFieAsString(): Bailing out...")
             return False
         return FTP().PutString(fname, s)
 
-
+    # -------------------------------
     # Return True if a message is recognized as an FTP success message; False otherwise
     def IsSuccess(self, ret: str) -> bool:
         successMessages=[
@@ -357,7 +377,7 @@ class FTP:
 
 
     #-------------------------------
-    # Copy a file from one directory on the the server to another
+    # Copy a file from one directory on the server to another
     def CopyFile(self, oldpathname: str, newpathname: str, filename: str) -> bool:
         if self.g_ftp is None:
             Log("FTP.CopyFile(): FTP not initialized", isError=True)
@@ -523,7 +543,6 @@ class FTP:
         if s is None:
             Log(f"FTP.GetFileAsString(): Could not load {directory}/{fname}")
         return s
-
 
 
     #-------------------------------
