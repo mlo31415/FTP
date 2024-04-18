@@ -112,7 +112,7 @@ class FTP:
 
 
     # ---------------------------------------------
-    # Make a new child directory named <newdir> in the current dorectory
+    # Make a new child directory named <newdir> in the current directory
     def MKD(self, newdir: str) -> bool:
         self.Log("**make directory: '"+newdir+"'")
         try:
@@ -471,7 +471,7 @@ class FTP:
             Log(ret, isError=True)
             Log("FTP.CopyFile(): retrbinary failed", isError=True)
 
-        # Write upload the file we just downloaded to the new directory
+        # Upload the file we just downloaded to the new directory
         # The new directory must already have been created
         if not self.PathExists(newpathname):
             Log(f"FTP.CopyFile(): newpathname='{newpathname}' not found", isError=True)
