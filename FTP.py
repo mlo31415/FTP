@@ -8,6 +8,7 @@ import tempfile
 import io
 
 from Log import Log, LogFlush
+from HelpersPackage import TimestampFilename
 
 
 class FTP:
@@ -487,6 +488,16 @@ class FTP:
             ret=self.g_ftp.storbinary(f"STOR {newfilename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
             self.Log(ret)
         return True
+
+
+    #-------------------------------
+    # Make a timestamped copy of a file on the server
+    def BackupServerFile(self, pathname) -> bool:
+        path, filename=os.path.split(pathname)
+        if not FTP().SetDirectory(path, Create=False):
+            Log(f"FTP.BackupServerFile(): Could not set directory to {path}")
+            return False
+        return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
 
 
     #-------------------------------
