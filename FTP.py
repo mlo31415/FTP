@@ -422,10 +422,6 @@ class FTP:
 
         Log(f"CopyAndRenameFile: {oldpathname=} {oldfilename=} {newpathname=} {newfilename=}")
 
-        # oldpathfilename=oldpathname+"/"+oldfilename
-        # if not self.FileExists(oldpathfilename):
-        #     Log(f"FTP.CopyAndRenameFile(): oldpathfilename '{oldpathfilename}' not found", isError=True)
-        #     return False
         self.CWD(oldpathname)
 
         # The lambda callback in retrbinary will accumulate bytes here
