@@ -409,74 +409,36 @@ class FTP:
 
     #-------------------------------
     # Copy a file from one directory on the server to another
-    def CopyFile(self, oldpathname: str, newpathname: str, filename: str) -> bool:
-        if self.g_ftp is None:
-            Log("FTP.CopyFile(): FTP not initialized", isError=True)
-            return False
-
-        if not self.PathExists(oldpathname):
-            Log(f"FTP.CopyFile(): oldpathname '{oldpathname}' not found", isError=True)
-            return False
-        self.CWD(oldpathname)
-
-        # The lambda callback in retrbinary will accumulate bytes here
-        temp: bytearray=bytearray(0)
-
-        self.Log(f"RETR {filename}  from {oldpathname}")
-        try:
-            ret=self.g_ftp.retrbinary(f"RETR {filename}", lambda data: temp.extend(data))
-            self.Log(ret)
-        except Exception as e:
-            Log(f"FTP.CopyFile(): FTP connection failure. Exception={e}", isError=True)
-            if not self.Reconnect():
-                return False
-            ret=self.g_ftp.retrbinary(f"RETR {filename}", lambda data: temp.extend(data))
-            self.Log(ret)
-
-        if not self.IsSuccess(ret):
-            Log(ret, isError=True)
-            Log("FTP.CopyFile(): retrbinary failed", isError=True)
-
-        # Write upload the file we just downloaded to the new directory
-        # The new directory must already have been created
-        if not self.PathExists(newpathname):
-            Log(f"FTP.CopyFile(): newpathname='{newpathname}' not found", isError=True)
-            return False
-        self.CWD(newpathname)
-
-        try:
-            self.Log(self.g_ftp.storbinary(f"STOR {filename}", io.BytesIO(temp)))
-        except Exception as e:
-            Log(f"FTP.PutFile(): FTP connection failure. Exception={e}")
-            if not self.Reconnect():
-                return False
-            ret=self.g_ftp.storbinary(f"STOR {filename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
-            self.Log(ret)
-        return True
+    def CopyFile(self, oldpathname: str, newpathname: str, filename: str, Create: bool=False) -> bool:
+        return self.CopyAndRenameFile(oldpathname, filename, newpathname, Create=Create)
 
 
     #-------------------------------
-    # Copy a file from one directory on the server to another while renaming the file
-    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str) -> bool:
+    # Copy a file from one directory on the server to another. Rename the file if newfilename != ""
+    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str=None, Create: bool=False) -> bool:
         if self.g_ftp is None:
-            Log("FTP.CopyFile(): FTP not initialized", isError=True)
+            Log("FTP.CopyAndRenameFile(): FTP not initialized", isError=True)
             return False
 
-        if not self.PathExists(oldpathname):
-            Log(f"FTP.CopyFile(): oldpathname '{oldpathname}' not found", isError=True)
-            return False
+        Log(f"CopyAndRenameFile: {oldpathname=} {oldfilename=} {newpathname=} {newfilename=}")
+
+        # oldpathfilename=oldpathname+"/"+oldfilename
+        # if not self.FileExists(oldpathfilename):
+        #     Log(f"FTP.CopyAndRenameFile(): oldpathfilename '{oldpathfilename}' not found", isError=True)
+        #     return False
         self.CWD(oldpathname)
 
         # The lambda callback in retrbinary will accumulate bytes here
         temp: bytearray=bytearray(0)
 
         self.Log(f"RETR {oldfilename} from {oldpathname}")
+        ret="No message returned by retrbinary()"
         try:
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
             self.Log(ret)
         except Exception as e:
             Log(ret)
-            Log(f"FTP.CopyFile(): FTP connection failure. Exception={e}", isError=True)
+            Log(f"FTP.CopyAndRenameFile().retrbinary(): Exception={e}", isError=True)
             if not self.Reconnect():
                 return False
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
@@ -484,23 +446,29 @@ class FTP:
 
         if not self.IsSuccess(ret):
             Log(ret, isError=True)
-            Log("FTP.CopyFile(): retrbinary failed", isError=True)
+            Log("FTP.CopyAndRenameFile(): retrbinary failed", isError=True)
+            return False
 
-        # Upload the file we just downloaded to the new directory
+        # Upload the file we just downloaded to the new directory, renaming it if specified.
         # The new directory must already have been created
         if not self.PathExists(newpathname):
-            Log(f"FTP.CopyFile(): newpathname='{newpathname}' not found", isError=True)
-            return False
+            Log(f"FTP.CopyAndRenameFile(): newpathname='{newpathname}' not found", isError=True)
+            if not Create:
+                return False
+            self.MKD(newpathname)
         self.CWD(newpathname)
+
+        if newfilename is None:
+            newfilename=oldfilename
 
         try:
             ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
             self.Log(ret)
         except Exception as e:
-            Log(f"FTP.PutFile(): FTP connection failure. Exception={e}")
+            Log(f"FTP.CopyAndRenameFile().PutFile(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
-            ret=self.g_ftp.storbinary(f"STOR {newfilename}", f) #TODO: Fix this! f needs to poiunt to the data being stored
+            ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
             self.Log(ret)
         return True
 
