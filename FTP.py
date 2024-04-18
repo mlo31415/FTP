@@ -241,15 +241,27 @@ class FTP:
     # ---------------------------------------------
     # Given a complete path of the form "/xxx/yyy/zzz" (note leading "/"and no trailing "/"), or a relative path of the form "xxx" (note no slashes) does it exist?
     def PathExists(self, dirPath: str) -> bool:
+        dirPath=dirPath.strip()
+        if len(dirPath) == 0:
+            return False
+
+        # Handle the case where we're looking at "/xxx", a folder at root level.
+        if dirPath[0] == "/":
+            self.CWD("/")
+            return self.FileExists(dirPath[1:])
+
+        # Now deal with more complex paths
         path=dirPath.split("/")
         if len(path) == 0:
             return self.FileExists(dirPath)
 
-        dir=path[-1]
-        self.CWD("/".join(path[:-1]))
-        if dir == "":
+        end=path[-1]    # The last element of the path
+        rest="/".join(path[:-1])    # The beginning of the path
+        if len(rest) > 0:
+            self.CWD(rest)
+        if end == "":
             return True
-        return self.FileExists(dir)
+        return self.FileExists(end)
 
 
     # ---------------------------------------------
@@ -266,8 +278,11 @@ class FTP:
         if "/" in filedir:
             path="/".join(filedir.split("/")[:-1])
             filedir=filedir.split("/")[-1]
+
         # Make sure we're at the path
         if len(path) > 0:
+            if not self.PathExists(path):
+                return False
             self.CWD(path)
 
         try:
