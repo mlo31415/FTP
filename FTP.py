@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Optional
 
 import ftplib
+from ftplib import error_perm
 import json
 import os
 import tempfile
@@ -432,7 +433,7 @@ class FTP:
         try:
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
             self.Log(ret)
-        except Exception as e:
+        except error_perm as e:
             Log(ret)
             Log(f"FTP.CopyAndRenameFile().retrbinary(): Exception={e}", isError=True)
             if not self.Reconnect():
