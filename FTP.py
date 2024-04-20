@@ -416,7 +416,7 @@ class FTP:
 
     #-------------------------------
     # Copy a file from one directory on the server to another. Rename the file if newfilename != ""
-    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str=None, Create: bool=False) -> bool:
+    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str=None, Create: bool=False, IgnoreMissingFile: bool=False) -> bool:
         if self.g_ftp is None:
             Log("FTP.CopyAndRenameFile(): FTP not initialized", isError=True)
             return False
@@ -437,6 +437,8 @@ class FTP:
             Log(ret)
             Log(f"FTP.CopyAndRenameFile().retrbinary(): Exception={e}", isError=True)
             if not self.Reconnect():
+                if IgnoreMissingFile:
+                    return True
                 return False
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
             self.Log(ret)
