@@ -248,7 +248,10 @@ class FTP:
 
         # Handle the case where we're looking at "/xxx", a folder at root level.
         if dirPath[0] == "/":
-            self.CWD("/")
+            if not self.CWD("/"):
+                return False
+            if dirPath[1:] == "":
+                return True     # We asked for "/" with no file, so no need to check fpor file
             return self.FileExists(dirPath[1:])
 
         # Now deal with more complex paths
