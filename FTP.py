@@ -152,20 +152,20 @@ class FTP:
 
     # ---------------------------------------------
     def Rename(self, oldname: str, newname: str) -> bool:
-        self.Log("**rename file: '"+oldname+"'  as  '"+newname+"'")
+        self.Log(f"**rename file: '{oldname}'  as  '{newname}'")
         if len(oldname.strip()) == 0 or len(newname.strip()) == 0:
             Log("FTP.Rename(): oldname or newname not supplied.")
             LogFlush()
             assert False
 
         if not self.FileExists(oldname):
-            Log("FTP.Rename: '"+oldname+"' does not exist.")
+            Log(f"FTP.Rename: '{oldname}' does not exist.")
             return False
 
         try:
             msg=self.g_ftp.rename(oldname, newname)
         except Exception as e:
-            Log("FTP.Rename: FTP connection failure. Exception="+str(e))
+            Log(f"FTP.Rename: FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.rename(oldname, newname)
@@ -234,6 +234,7 @@ class FTP:
         Log(f"FTP.PWD(): {lead=}  {tail=}")
         if not self.ComparePaths(FTP.g_curdirpath,  dir):
             Log("FTP.PWD(): error detected -- self._curdirpath='"+FTP.g_curdirpath+"' and pwd returns '"+dir+"'")
+            Log(f"FTP.PWD(): error detected -- self._curdirpath='{FTP.g_curdirpath}' and pwd returns '{dir}'")
             assert False
 
         return dir
