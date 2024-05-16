@@ -154,7 +154,7 @@ class FTP:
     def Rename(self, oldname: str, newname: str) -> bool:
         self.Log(f"**rename file: '{oldname}'  as  '{newname}'")
         if len(oldname.strip()) == 0 or len(newname.strip()) == 0:
-            Log("FTP.Rename(): oldname or newname not supplied.")
+            Log("FTP.Rename(): oldname or newname not supplied. Probably irrecoverable, so exiting program.")
             LogFlush()
             assert False
 
@@ -233,8 +233,8 @@ class FTP:
         lead, tail=os.path.split(FTP.g_curdirpath)
         Log(f"FTP.PWD(): {lead=}  {tail=}")
         if not self.ComparePaths(FTP.g_curdirpath,  dir):
-            Log("FTP.PWD(): error detected -- self._curdirpath='"+FTP.g_curdirpath+"' and pwd returns '"+dir+"'")
             Log(f"FTP.PWD(): error detected -- self._curdirpath='{FTP.g_curdirpath}' and pwd returns '{dir}'")
+            Log("Probably irrecoverable, so exiting program.")
             assert False
 
         return dir
