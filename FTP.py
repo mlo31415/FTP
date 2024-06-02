@@ -440,7 +440,7 @@ class FTP:
         self.Log(f"RETR {oldfilename} from {oldpathname}")
         ret="No message returned by retrbinary()"
         try:
-            ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
+            ret=self.g_ftp.retrbinary(f"RETR {oldfilename.replace(' ', '%20')}", lambda data: temp.extend(data))
             self.Log(ret)
         except error_perm as e:
             Log(ret)
