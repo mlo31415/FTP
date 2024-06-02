@@ -257,7 +257,7 @@ class FTP:
             if not self.CWD("/"):
                 return False
             if dirPath[1:] == "":
-                return True     # We asked for "/" with no file, so no need to check fpor file
+                return True     # We asked for "/" with no file, so no need to check for file
             return self.FileExists(dirPath[1:])
 
         # Now deal with more complex paths
