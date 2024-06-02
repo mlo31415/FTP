@@ -283,6 +283,10 @@ class FTP:
             self.Log("  --> Yes, it always exists")
             return True     # "/" always exists
 
+        # A trailing "/" needs to be ignored as that means there is no file, just a directory, and in that case, the "/" cause test to fail
+        if filedir[-1] == "/":
+            filedir=filedir[:-1]
+
         # Split the filedir into path+file
         path=""
         if "/" in filedir:
