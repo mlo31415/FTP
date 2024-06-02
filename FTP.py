@@ -96,13 +96,18 @@ class FTP:
             self.Log("  Already there!")
             return True
 
+        msg=""
         try:
             msg=self.g_ftp.cwd(newdir)
         except Exception as e:
             self.Log("FTP.CWD(): FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
                 return False
-            msg=self.g_ftp.cwd(newdir)
+            try:
+                msg=self.g_ftp.cwd(newdir)
+            except Exception as e:
+                self.Log(f"g_ftp.cwd({newdir}): FTP connection failure. Exception="+str(e))
+                return False
 
         self.Log(msg)
         ret=msg.startswith("250 OK.")
