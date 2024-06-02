@@ -488,6 +488,7 @@ class FTP:
         if not FTP().SetDirectory(path, Create=False):
             Log(f"FTP.BackupServerFile(): Could not set directory to {path}")
             return False
+        path=path.replace("//", "")
         return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
 
 
