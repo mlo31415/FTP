@@ -93,6 +93,7 @@ class FTP:
         wd=self.PWD()
         self.Log("**CWD from '"+wd+"' to '"+newdir+"'")
         if wd == newdir:
+        self.Log(f"**CWD from '{wd}' to '{newdir}'")
             self.Log("  Already there!")
             return True
 
@@ -100,13 +101,13 @@ class FTP:
         try:
             msg=self.g_ftp.cwd(newdir)
         except Exception as e:
-            self.Log("FTP.CWD(): FTP connection failure. Exception="+str(e))
+            self.Log(f"FTP.CWD(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             try:
                 msg=self.g_ftp.cwd(newdir)
             except Exception as e:
-                self.Log(f"g_ftp.cwd({newdir}): FTP connection failure. Exception="+str(e))
+                self.Log(f"g_ftp.cwd({newdir}): FTP connection failure. Exception={e}")
                 return False
 
         self.Log(msg)
@@ -278,7 +279,7 @@ class FTP:
     # Given a filename (possibly includeing a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
         if self.g_dologging:
-            Log("Does '"+filedir+"' exist?", noNewLine=True)
+            Log(f"Does '{filedir}' exist?", noNewLine=True)
         if filedir == "/":
             self.Log("  --> Yes, it always exists")
             return True     # "/" always exists
@@ -296,6 +297,7 @@ class FTP:
         # Make sure we're at the path
         if len(path) > 0:
             if not self.PathExists(path):
+                Log(f"  --> path {path} does not exist")
                 return False
             self.CWD(path)
 
