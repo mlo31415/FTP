@@ -91,9 +91,8 @@ class FTP:
     # Given a full path "/xxx/yyy/zzz" or a single child directory name (no slashes), change to that directory
     def CWD(self, newdir: str) -> bool:
         wd=self.PWD()
-        self.Log("**CWD from '"+wd+"' to '"+newdir+"'")
-        if wd == newdir:
         self.Log(f"**CWD from '{wd}' to '{newdir}'")
+        if wd == newdir or wd+"/" == newdir:
             self.Log("  Already there!")
             return True
 
@@ -494,7 +493,7 @@ class FTP:
         if not FTP().SetDirectory(path, Create=False):
             Log(f"FTP.BackupServerFile(): Could not set directory to {path}")
             return False
-        path=path.replace("//", "")
+        path=path.replace("//", "/")
         return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
 
 
