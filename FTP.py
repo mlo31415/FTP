@@ -107,7 +107,7 @@ class FTP:
             try:
                 msg=self.g_ftp.cwd(newdir)
             except Exception as e:
-                self.Log(f"g_ftp.cwd({newdir}): FTP connection failure. Exception={e}")
+                self.Log(f"g_ftp.cwd('{newdir}'): FTP connection failure. Exception={e}")
                 return False
 
         self.Log(msg)
@@ -297,7 +297,7 @@ class FTP:
         # Make sure we're at the path
         if len(path) > 0:
             if not self.PathExists(path):
-                Log(f"  --> path {path} does not exist")
+                Log(f"  --> path '{path}' does not exist")
                 return False
             self.CWD(path)
 
@@ -443,7 +443,7 @@ class FTP:
         # The lambda callback in retrbinary will accumulate bytes here
         temp: bytearray=bytearray(0)
 
-        self.Log(f"RETR {oldfilename} from {oldpathname}")
+        self.Log(f"RETR '{oldfilename}' from '{oldpathname}'")
         ret="No message returned by retrbinary()"
         try:
             ret=self.g_ftp.retrbinary(f"RETR {oldfilename.replace(' ', '%20')}", lambda data: temp.extend(data))
@@ -492,7 +492,7 @@ class FTP:
     def BackupServerFile(self, pathname) -> bool:
         path, filename=os.path.split(pathname)
         if not FTP().SetDirectory(path, Create=False):
-            Log(f"FTP.BackupServerFile(): Could not set directory to {path}")
+            Log(f"FTP.BackupServerFile(): Could not set directory to '{path}'")
             return False
         path=path.replace("//", "/")
         return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
@@ -531,7 +531,7 @@ class FTP:
         fd=tempfile.TemporaryDirectory()
         self.Log("RETR "+fname+"  to "+fd.name)
         if not self.FileExists(fname):
-            Log(f"FTP.GetAsString(): {fname} does not exist.")
+            Log(f"FTP.GetAsString(): '{fname}' does not exist.")
             fd.cleanup()
             return None
         # Download the file into the temporary file
@@ -565,7 +565,7 @@ class FTP:
             return None
         s=FTP().GetAsString(fname)
         if s is None:
-            Log(f"FTP.GetFileAsString(): Could not load {directory}/{fname}")
+            Log(f"FTP.GetFileAsString(): Could not load '{directory}/{fname}'")
         return s
 
 
