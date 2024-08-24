@@ -47,7 +47,7 @@ class FTP:
         self.Log("Reconnect")
         if len(FTP.g_credentials) == 0:
             return False
-        FTP.g_ftp=ftplib.FTP_TLS(host=FTP.g_credentials["host"], user=FTP.g_credentials["ID"], passwd=FTP.g_credentials["PW"])
+        FTP.g_ftp=ftplib.FTP_TLS(host=FTP.g_credentials["host"], user=FTP.GetEditor(), passwd=FTP.g_credentials["PW"])
         FTP.g_ftp.prot_p()
 
         # Now we need to restore the current working directory
