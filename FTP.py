@@ -28,7 +28,8 @@ class FTP:
 
     #----------------------------------------------
     # Get the ID from the FTP login-in credentials
-    def GetEditor(self) -> str:
+    @staticmethod
+    def GetEditor() -> str:
         return FTP.g_credentials["ID"]
 
 
