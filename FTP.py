@@ -36,10 +36,21 @@ class FTP:
     #----------------------------------------------
     # A special Log which only writes when FTP has logging turned on.
     # Used for debugging messages, b not error messages
-    def Log(self, s: str):
-        if self.g_dologging:
-            Log(s)
+    def Log(self, s: str, noNewLine=False):
+        if FTP.g_dologging:
+            Log(s, noNewLine)
 
+
+    def LoggingOff(self):
+        if FTP.g_dologging:
+            Log("FTP Logging turned off")    # Only log a change of state
+        FTP.g_dologging = False
+
+
+    def LoggingOn(self):
+        if not FTP.g_dologging:
+            Log("FTP Logging turned on")    # Only log a change of state
+        FTP.g_dologging = True
 
     # ---------------------------------------------
     # If we get a connection failure, reconnect tries to re-establish the connection and put the FTP object into a consistent state and then to restore the CWD
@@ -237,7 +248,7 @@ class FTP:
 
         # Check to see if this matches what self._curdirpath thinks it ought to
         lead, tail=os.path.split(FTP.g_curdirpath)
-        Log(f"FTP.PWD(): {lead=}  {tail=}")
+        self.Log(f"FTP.PWD(): {lead=}  {tail=}")
         if not self.ComparePaths(FTP.g_curdirpath,  dir):
             Log(f"FTP.PWD(): error detected -- self._curdirpath='{FTP.g_curdirpath}' and pwd returns '{dir}'")
             Log("Probably irrecoverable, so exiting program.")
@@ -278,10 +289,8 @@ class FTP:
     # ---------------------------------------------
     # Given a filename (possibly includeing a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
-        if self.g_dologging:
-            Log(f"Does '{filedir}' exist?", noNewLine=True)
         if filedir == "/":
-            self.Log("  --> Yes, it always exists")
+            self.Log(f"Does '{filedir}' exist?  --> Yes, '/' always exists")
             return True     # "/" always exists
 
         # A trailing "/" needs to be ignored as that means there is no file, just a directory, and in that case, the "/" cause test to fail
@@ -297,7 +306,7 @@ class FTP:
         # Make sure we're at the path
         if len(path) > 0:
             if not self.PathExists(path):
-                Log(f"  --> path '{path}' does not exist")
+                self.Log(f"Does '{filedir}' exist? --> path '{path}' does not exist")
                 return False
             self.CWD(path)
 
@@ -305,7 +314,7 @@ class FTP:
             if filedir in self.g_ftp.nlst():
                 self.Log("  --> yes")
                 return True
-            self.Log("'  --> no, it does not exist")
+            self.Log(f"Does '{filedir}' exist?  --> no, it does not exist")
             return False
         except:
             Log("'FTP.FileExists(): FTP failure: retrying")
