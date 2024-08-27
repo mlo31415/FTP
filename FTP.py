@@ -55,7 +55,7 @@ class FTP:
     # ---------------------------------------------
     # If we get a connection failure, reconnect tries to re-establish the connection and put the FTP object into a consistent state and then to restore the CWD
     def Reconnect(self) -> bool:
-        self.Log("Reconnect")
+        self.Log("Reconnect attempted")
         if len(FTP.g_credentials) == 0:
             return False
         FTP.g_ftp=ftplib.FTP_TLS(host=FTP.g_credentials["host"], user=FTP.GetEditor(), passwd=FTP.g_credentials["PW"])
@@ -67,7 +67,7 @@ class FTP:
         self.Log(msg)
         ret=msg.startswith("250 OK.")
         if not ret:
-            Log("FTP.Reconnect failed")
+            Log("***FTP.Reconnect failed")
             return False
 
         self.Log("Reconnect: successful. Change directory to "+FTP.g_curdirpath)
@@ -83,7 +83,7 @@ class FTP:
     # If the input is an absolute path, just use it (removing any trailing filename)
     # If it's a relative move, compute the new wd path
     def UpdateCurpath(self, newdir: str) -> None:
-        self.Log("UpdateCurpath from "+FTP.g_curdirpath+"  with cwd('"+newdir+"')")
+        self.Log(f"UpdateCurpath('{newdir}') ...from {FTP.g_curdirpath}")
         if newdir[0] == "/":    # Absolute directory move
             FTP.g_curdirpath=newdir
         elif newdir == "..":    # Relative move up one directory
@@ -103,22 +103,21 @@ class FTP:
     # Given a full path "/xxx/yyy/zzz" or a single child directory name (no slashes), change to that directory
     def CWD(self, newdir: str) -> bool:
         wd=self.PWD()
-        self.Log(f"**CWD from '{wd}' to '{newdir}'")
         if wd == newdir or wd+"/" == newdir:
-            self.Log("  Already there!")
+            self.Log(f"CWD('{newdir}') from '{wd}' so already there")
             return True
 
         msg=""
         try:
             msg=self.g_ftp.cwd(newdir)
         except Exception as e:
-            self.Log(f"FTP.CWD(): FTP connection failure. Exception={e}")
+            self.Log(f"***FTP.CWD(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             try:
                 msg=self.g_ftp.cwd(newdir)
             except Exception as e:
-                self.Log(f"g_ftp.cwd('{newdir}'): FTP connection failure. Exception={e}")
+                self.Log(f"***g_ftp.cwd('{newdir}'): FTP connection failure. Exception={e}")
                 return False
 
         self.Log(msg)
@@ -240,18 +239,18 @@ class FTP:
         try:
             dir=self.g_ftp.pwd()
         except Exception as e:
-            Log("FTP.PWD(): FTP connection failure. Exception="+str(e))
+            Log("PWD(): FTP connection failure. Exception="+str(e))
             if not self.Reconnect():
                 return ""
             dir=self.g_ftp.pwd()
-        self.Log("pwd is '"+dir+"'")
+        self.Log("PWD() --> '"+dir+"'")
 
         # Check to see if this matches what self._curdirpath thinks it ought to
         lead, tail=os.path.split(FTP.g_curdirpath)
-        self.Log(f"FTP.PWD(): {lead=}  {tail=}")
+        self.Log(f"PWD(): {lead=}  {tail=}")
         if not self.ComparePaths(FTP.g_curdirpath,  dir):
-            Log(f"FTP.PWD(): error detected -- self._curdirpath='{FTP.g_curdirpath}' and pwd returns '{dir}'")
-            Log("Probably irrecoverable, so exiting program.")
+            Log(f"***PWD(): error detected -- self._curdirpath='{FTP.g_curdirpath}' and pwd returns '{dir}'")
+            Log("***Probably irrecoverable, so exiting program.")
             assert False
 
         return dir
@@ -290,7 +289,7 @@ class FTP:
     # Given a filename (possibly includeing a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
         if filedir == "/":
-            self.Log(f"Does '{filedir}' exist?  --> Yes, '/' always exists")
+            self.Log(f"FileExists('{filedir}') --> of course it does.")
             return True     # "/" always exists
 
         # A trailing "/" needs to be ignored as that means there is no file, just a directory, and in that case, the "/" cause test to fail
@@ -306,15 +305,15 @@ class FTP:
         # Make sure we're at the path
         if len(path) > 0:
             if not self.PathExists(path):
-                self.Log(f"Does '{filedir}' exist? --> path '{path}' does not exist")
+                self.Log(f"FileExists('{filedir}') --> path '{path}' does not exist")
                 return False
             self.CWD(path)
 
         try:
             if filedir in self.g_ftp.nlst():
-                self.Log("  --> yes")
+                self.Log(f"FileExists('{filedir}') --> yes")
                 return True
-            self.Log(f"Does '{filedir}' exist?  --> no, it does not exist")
+            self.Log(f"FileExists('{filedir}') --> no, it does not exist")
             return False
         except:
             Log("'FTP.FileExists(): FTP failure: retrying")
@@ -328,13 +327,13 @@ class FTP:
     # Setting Create=True allows the creation of new directories as needed
     # Newdir can be a whole path starting with "/" or a path relative to the current directory if it doesn't start with a "/"
     def SetDirectory(self, newdir: str, Create: bool=False) -> bool:
-        self.Log("**SetDirectory: "+newdir)
+        self.Log(f"SetDirectory('{newdir}', {Create=})")
 
-        # Split newdir into components
+        # No directory means no work
         if newdir is None or len(newdir) == 0:
             return True
 
-        # If we've been given an absolte path and we're already there, return
+        # If we've been given an absolute path, and we're already there, return
         if newdir[0] == "/" and newdir == self.g_curdirpath:
             self.Log("SetDirectory: already there with an absolute path")
             return True
@@ -352,15 +351,15 @@ class FTP:
             if not self.FileExists(component):
                 # If not, are we allowed to create it"
                 if not Create:
-                    Log("FTP.SetDirectory(): called for a non-existant directory with create=False")
+                    Log("***FTP.SetDirectory(): called for a non-existent directory with create=False")
                     return False
                 if not self.MKD(component):
-                    Log("FTP.SetDirectory(): mkd failed...bailing out...")
+                    Log("***FTP.SetDirectory(): mkd failed...bailing out...")
                     return False
 
             # Now cwd to it.
             if not self.CWD(component):
-                Log("FTP.SetDirectory(): cwd failed...bailing out...")
+                Log("***FTP.SetDirectory(): cwd failed...bailing out...")
                 return False
 
         return True
@@ -569,8 +568,9 @@ class FTP:
 
     #-------------------------------
     def GetFileAsString(self, directory: str, fname: str) -> Optional[str]:
+        Log(f"GetFileAsString('{directory}', '{fname}')")
         if not self.SetDirectory(directory):
-            Log("GetFileAsString(): Bailing out...")
+            Log(f"GetFileAsString(): SetDirectory('{directory}') failed. Bailing out...")
             return None
         s=FTP().GetAsString(fname)
         if s is None:
