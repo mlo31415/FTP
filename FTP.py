@@ -497,13 +497,20 @@ class FTP:
 
     #-------------------------------
     # Make a timestamped copy of a file on the server
+    # If the file does not exist, return True.
+    # For other failures, return False
     def BackupServerFile(self, pathname) -> bool:
         path, filename=os.path.split(pathname)
-        if not FTP().SetDirectory(path, Create=False):
+        if not FTP().SetDirectory(path, Create=True):
             Log(f"FTP.BackupServerFile(): Could not set directory to '{path}'")
             return False
         path=path.replace("//", "/")
-        return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
+        try:
+            return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
+        except error_perm as e:
+            Log(f"BackupServerFile('{pathname}'): could not read file to be backed up.  Will assume there is nothing needing backup.")
+        return True
+
 
 
     #-------------------------------
