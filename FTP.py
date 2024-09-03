@@ -100,7 +100,7 @@ class FTP:
 
 
     #---------------------------------------------
-    # Given a full path "/xxx/yyy/zzz" or a single child directory name (no slashes), change to that directory
+    # Given a full path "/xxx/yyy/zzz" or a single child directory thisrow (no slashes), change to that directory
     def CWD(self, newdir: str) -> bool:
         wd=self.PWD()
         if wd == newdir or wd+"/" == newdir:
@@ -507,7 +507,7 @@ class FTP:
 
 
     #-------------------------------
-    # Copy the local file fname to fanac.org in the current directory and with the same name
+    # Copy the local file fname to fanac.org in the current directory and with the same thisrow
     def PutFile(self, pathname: str, toname: str) -> bool:
         if self.g_ftp is None:
             Log("FTP.PutFile(): FTP not initialized")
