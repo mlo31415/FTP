@@ -7,8 +7,12 @@ import json
 import os
 import tempfile
 import io
+import time
 
-from Log import Log, LogFlush
+from win32ctypes.pywin32.pywintypes import datetime
+from datetime import datetime, timedelta
+
+from Log import Log, LogFlush, LogError
 from HelpersPackage import TimestampFilename
 
 
@@ -602,3 +606,70 @@ class FTP:
             return []
 
         return [x for x in self.g_ftp.nlst() if x != "." and x != ".."] # Ignore the . and .. elements
+
+
+#============================================================
+# A class to maintain acrude locking system on an FTP server
+# Note that an FTP link must already be set up.
+class Lock:
+
+    # Lock returns False if there is already a lock in place; returns True and sets a lock if there is no lock or the lock has expired
+    def SetLock(self, path: str, id: str) -> str:
+
+        lockid, lockdate=self.GetLock(path)
+        if lockid == "":
+            # There is none. So set a lock for me
+            self.MakeLock(path, id)
+            return ""
+
+        # If a lock exists, but is my own id or is a blank id, we always override it and write a new lock.
+        if lockid == id or lockid == "":
+            self.MakeLock(path, id)
+            return ""
+
+        # If it's not my lock, see if it has expired
+        lockdate=datetime.strptime(lockdate, '%Y-%m-%d %H:%M:%S')
+        if datetime.now()-lockdate > timedelta(hours=12):
+            # It has expired -- override it
+            self.MakeLock(path, id)
+            return ""
+
+        # OK, it's locked by someone else
+        return f"Locked by {id} on {lockdate:%Y-%m-%d} at {lockdate:%H:%M:%S}"
+
+
+    def GetLock(self, path: str) -> tuple[str, str]:
+        # Get any  existing lock
+        lock=FTP().GetAsString(f"/{path}/Lock")
+        if lock is None or lock == "":
+            return ("", "")
+        # There is an existing lock.  Extract the ID and datetime
+        lockbits=lock.split("=", 1) + [""]  # The [" "] is to ensure there are always at least two elements in lockbits
+        return (lockbits[0], lockbits[1])
+
+
+    def MakeLock(self, path: str, id: str):
+        if not FTP().PutString(f"/{path}/Lock", f"{id}={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"):
+            LogError(f"SetLock('{path}', '{id}') failed")
+            raise Exception(f"SetLock('{path}', '{id}') failed")
+
+
+    # Release my lock.
+    # True indicates lock released (or never existed)
+    # False indicates Classic is locked by someone else
+    def ReleaseLock(self, path: str, id: str) -> bool:
+        lock=FTP().GetAsString(path+"/Lock")
+
+        if lock is None:
+            return True
+
+        lockid, lockdate=lock.split("=", 1)
+
+        # If it's my own lock, we always override it.  Otherwise, we always leave it.
+        if lockid == id:
+            if FTP().DeleteFile(path+"/Lock"):
+                return True
+
+        return False
+
+
