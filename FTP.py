@@ -83,6 +83,7 @@ class FTP:
     # If the input is an absolute path, just use it (removing any trailing filename)
     # If it's a relative move, compute the new wd path
     def UpdateCurpath(self, newdir: str) -> None:
+        newdir=newdir.replace("//", "/")
         self.Log(f"UpdateCurpath('{newdir}') ...from {FTP.g_curdirpath}")
         if newdir[0] == "/":    # Absolute directory move
             FTP.g_curdirpath=newdir
@@ -102,6 +103,7 @@ class FTP:
     #---------------------------------------------
     # Given a full path "/xxx/yyy/zzz" or a single child directory thisrow (no slashes), change to that directory
     def CWD(self, newdir: str) -> bool:
+        newdir=newdir.replace("//", "/")
         wd=self.PWD()
         if wd == newdir or wd+"/" == newdir:
             self.Log(f"CWD('{newdir}') from '{wd}' so already there")
@@ -225,6 +227,8 @@ class FTP:
     #----------------------------------------------
     # Compare two paths for equality.  We ignore differences in trailing "/"
     def ComparePaths(self, p1: str, p2: str) -> bool:
+        p1=p1.replace("//", "/")
+        p2=p2.replace("//", "/")
         # Make sure that there is a trailing "/" before comparing
         if len(p1) == 0 or p1[-1] != "/":
             p1+="/"
@@ -259,6 +263,8 @@ class FTP:
     # ---------------------------------------------
     # Given a complete path of the form "/xxx/yyy/zzz" (note leading "/"and no trailing "/"), or a relative path of the form "xxx" (note no slashes) does it exist?
     def PathExists(self, dirPath: str) -> bool:
+        dirPath=dirPath.replace("//", "/")
+
         dirPath=dirPath.strip()
         if len(dirPath) == 0:
             return False
