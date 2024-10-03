@@ -567,7 +567,7 @@ class FTP:
                 return None
             msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
         self.Log(msg)
-        if not msg.startswith("226-File successfully transferred"):
+        if not msg.startswith("226"):
             Log("FTP.GetAsString(): failed")
             fd.cleanup()
             return None
