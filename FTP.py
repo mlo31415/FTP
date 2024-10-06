@@ -578,7 +578,7 @@ class FTP:
 
         with open(tempfname, "r") as f:
             out=f.readlines()
-        out="/n".join(out)
+        out="".join(out)    # Rejoin into a string
         fd.cleanup()
         return out
 
