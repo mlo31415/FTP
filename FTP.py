@@ -1,6 +1,4 @@
 from __future__ import annotations
-from typing import Optional
-
 import ftplib
 from ftplib import error_perm
 import json
@@ -548,7 +546,7 @@ class FTP:
 
     #-------------------------------
     # Download the ascii file named fname in the current directory on fanac.org into a string
-    def GetAsString(self, fname: str) -> Optional[str]:
+    def GetAsString(self, fname: str) -> str|None:
         if self.g_ftp is None:
             Log("FTP.GetAsString(): FTP not initialized")
             return None
@@ -584,7 +582,7 @@ class FTP:
 
 
     #-------------------------------
-    def GetFileAsString(self, directory: str, fname: str) -> Optional[str]:
+    def GetFileAsString(self, directory: str, fname: str) -> str|None:
         self.Log(f"GetFileAsString('{directory}', '{fname}')")
         if not self.SetDirectory(directory):
             Log(f"***GetFileAsString(): SetDirectory('{directory}') failed. Bailing out...")
