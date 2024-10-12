@@ -5,7 +5,6 @@ import json
 import os
 import tempfile
 import io
-import time
 
 from win32ctypes.pywin32.pywintypes import datetime
 from datetime import datetime, timedelta
