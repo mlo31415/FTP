@@ -30,7 +30,10 @@ class FTP:
     #----------------------------------------------
     # Get the ID from the FTP login-in credentials
     @staticmethod
-    def GetEditor() -> str:
+    def GetEditor() -> str:     # Deprecated: Retained for compatibility
+        return FTP.UserID()
+    @staticmethod
+    def UserID() -> str:    # New, preferred name for method
         return FTP.g_credentials["ID"]
 
 
