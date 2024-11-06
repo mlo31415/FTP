@@ -104,6 +104,9 @@ class FTP:
                 FTP.g_curdirpath+="/"+newdir
 
 
+    def GetCurPath(self) -> str:
+        return self.g_curdirpath
+
     #---------------------------------------------
     # Given a full path "/xxx/yyy/zzz" or a single child directory thisrow (no slashes), change to that directory
     def CWD(self, newdir: str) -> bool:
