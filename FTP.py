@@ -546,6 +546,7 @@ class FTP:
         except Exception as e:
             Log(f"FTP.PutFile(): Exception on Open('{pathname}', 'rb') ")
             Log(str(e))
+            return False
         return True
 
 
