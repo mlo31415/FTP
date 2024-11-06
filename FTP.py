@@ -588,10 +588,13 @@ class FTP:
 
 
     #-------------------------------
-    def GetFileAsString(self, directory: str, fname: str) -> str|None:
+    def GetFileAsString(self, directory: str, fname: str, TestLoad: bool=False) -> str|None:
         self.Log(f"GetFileAsString('{directory}', '{fname}')")
         if not self.SetDirectory(directory):
-            Log(f"***GetFileAsString(): SetDirectory('{directory}') failed. Bailing out...")
+            if TestLoad:
+                Log(f"***GetFileAsString(): SetDirectory('{directory}') not found. Not fatal.")
+            else:
+                Log(f"***GetFileAsString(): SetDirectory('{directory}') failed. Bailing out...")
             return None
         s=FTP().GetAsString(fname)
         if s is None:
