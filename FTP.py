@@ -642,7 +642,7 @@ class Lock:
             return ""
 
         # OK, it's locked by someone else
-        return f"Locked by {id} on {lockdate:%Y-%m-%d} at {lockdate:%H:%M:%S}"
+        return f"Locked by {lockid} on {lockdate:%Y-%m-%d} at {lockdate:%H:%M:%S}"
 
 
     def GetLock(self, path: str) -> tuple[str, str]:
