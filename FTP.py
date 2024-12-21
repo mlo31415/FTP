@@ -18,6 +18,7 @@ class FTP:
     g_curdirpath: str="/"
     g_credentials: dict={}      # Saves the credentials for reconnection if the server times out
     g_dologging: bool=True      # Turn on logging of useful debugging information
+    _lastMessage: str=""         # Holds the last error message
 
 
     # ---------------------------------------------
@@ -35,6 +36,13 @@ class FTP:
     @staticmethod
     def UserID() -> str:    # New, preferred name for method
         return FTP.g_credentials["ID"]
+
+    # Return the last message and then clear it.
+    @property
+    def LastMessage(self) -> str:
+        lm=FTP._lastMessage
+        FTP._lastMessage=""
+        return lm
 
 
     #----------------------------------------------
@@ -59,6 +67,7 @@ class FTP:
     # ---------------------------------------------
     # If we get a connection failure, reconnect tries to re-establish the connection and put the FTP object into a consistent state and then to restore the CWD
     def Reconnect(self) -> bool:
+        FTP._lastMessage=""   # Clear the last essage
         self.Log("Reconnect attempted")
         if len(FTP.g_credentials) == 0:
             return False
@@ -154,6 +163,7 @@ class FTP:
 
     # ---------------------------------------------
     def DeleteFile(self, fname: str) -> bool:
+        FTP._lastMessage=""   # Clear the last essage
         self.Log("**delete file: '"+fname+"'")
         if len(fname.strip()) == 0:
             Log("FTP.DeleteFile(): filename not supplied.")
@@ -177,6 +187,7 @@ class FTP:
 
     # ---------------------------------------------
     def Rename(self, oldname: str, newname: str) -> bool:
+        FTP._lastMessage=""   # Clear the last message
         self.Log(f"**rename file: '{oldname}'  as  '{newname}'")
         if len(oldname.strip()) == 0 or len(newname.strip()) == 0:
             Log("FTP.Rename(): oldname or newname not supplied. Probably irrecoverable, so exiting program.")
@@ -184,16 +195,20 @@ class FTP:
             assert False
 
         if not self.FileExists(oldname):
-            Log(f"FTP.Rename: '{oldname}' does not exist.")
+            msg=f"FTP.Rename: '{oldname}' does not exist."
+            FTP._lastMessage=msg
+            Log(msg)
             return False
 
         try:
             msg=self.g_ftp.rename(oldname, newname)
+            FTP._lastMessage=msg
         except Exception as e:
             Log(f"FTP.Rename: FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.rename(oldname, newname)
+            FTP._lastMessage=msg
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
@@ -202,6 +217,7 @@ class FTP:
     # Delete a leaf-node directory and any files and empty directories it contains.
     # Note that since this does not delete recursively, the contents of any subdirectories must be deleted first.
     def DeleteDir(self, dirname: str) -> bool:
+        FTP._lastMessage=""   # Clear the last message
         self.Log("**delete directory: '"+dirname+"'")
         if len(dirname.strip()) == 0:
             Log("FTP.DeleteDir(): dirname not supplied.")
@@ -222,11 +238,14 @@ class FTP:
 
         try:
             msg=self.g_ftp.rmd(dirname)
+            FTP._lastMessage=msg
         except Exception as e:
             Log(f"FTP.DeleteDir(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
                 return False
             msg=self.g_ftp.rmd(dirname)
+            FTP._lastMessage=msg
+
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
@@ -270,6 +289,8 @@ class FTP:
     # ---------------------------------------------
     # Given a complete path of the form "/xxx/yyy/zzz" (note leading "/"and no trailing "/"), or a relative path of the form "xxx" (note no slashes) does it exist?
     def PathExists(self, dirPath: str) -> bool:
+        FTP._lastMessage=""  # Clear the last message
+        FTP._lastMessage=""   # Clear the last message
         dirPath=dirPath.replace("//", "/")
 
         dirPath=dirPath.strip()
@@ -301,6 +322,7 @@ class FTP:
     # ---------------------------------------------
     # Given a filename (possibly includeing a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         if filedir == "/":
             self.Log(f"FileExists('{filedir}') --> of course it does.")
             return True     # "/" always exists
@@ -340,6 +362,7 @@ class FTP:
     # Setting Create=True allows the creation of new directories as needed
     # Newdir can be a whole path starting with "/" or a path relative to the current directory if it doesn't start with a "/"
     def SetDirectory(self, newdir: str, Create: bool=False) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         self.Log(f"SetDirectory('{newdir}', {Create=})")
 
         # No directory means no work
@@ -381,6 +404,7 @@ class FTP:
     #-------------------------------
     # Copy the string s to fanac.org as a file in the current directory named fname.
     def PutString(self, fname: str, s: str) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.PutString(): FTP not initialized")
             return False
@@ -405,6 +429,7 @@ class FTP:
     #-------------------------------
     # Append the string s to file fname on fanac.org in the current directory
     def AppendString(self, fname: str, s: str) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.AppendString(): FTP not initialized")
             return False
@@ -429,6 +454,7 @@ class FTP:
     #-------------------------------
     # Copy the string s to fanac.org as a file <fname> in directory <directory>, creating directories as needed.
     def PutFileAsString(self, directory: str, fname: str, s: str, create: bool=False) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         if not FTP().SetDirectory(directory, Create=create):
             Log("FTP.PutFieAsString(): Bailing out...")
             return False
@@ -453,6 +479,7 @@ class FTP:
     #-------------------------------
     # Copy a file from one directory on the server to another. Rename the file if newfilename != ""
     def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str=None, Create: bool=False, IgnoreMissingFile: bool=False) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.CopyAndRenameFile(): FTP not initialized", isError=True)
             return False
@@ -513,6 +540,7 @@ class FTP:
     # If the file does not exist, return True.
     # For other failures, return False
     def BackupServerFile(self, pathname) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         path, filename=os.path.split(pathname)
         if not FTP().SetDirectory(path, Create=True):
             Log(f"FTP.BackupServerFile(): Could not set directory to '{path}'")
@@ -529,6 +557,7 @@ class FTP:
     #-------------------------------
     # Copy the local file fname to fanac.org in the current directory and with the same thisrow
     def PutFile(self, pathname: str, toname: str) -> bool:
+        FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.PutFile(): FTP not initialized")
             return False
@@ -553,6 +582,7 @@ class FTP:
     #-------------------------------
     # Download the ascii file named fname in the current directory on fanac.org into a string
     def GetAsString(self, fname: str) -> str|None:
+        FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.GetAsString(): FTP not initialized")
             return None
@@ -580,7 +610,7 @@ class FTP:
             fd.cleanup()
             return None
 
-        with open(tempfname, "r") as f:
+        with open(tempfname, "r", encoding='utf8') as f:
             out=f.readlines()
         out="".join(out)    # Rejoin into a string
         fd.cleanup()
@@ -589,6 +619,7 @@ class FTP:
 
     #-------------------------------
     def GetFileAsString(self, directory: str, fname: str, TestLoad: bool=False) -> str|None:
+        FTP._lastMessage=""  # Clear the last message
         self.Log(f"GetFileAsString('{directory}', '{fname}')")
         if not self.SetDirectory(directory):
             if TestLoad:
@@ -604,6 +635,7 @@ class FTP:
 
     #-------------------------------
     def Nlst(self, directory: str) -> list[str]:
+        FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.Nlst(): FTP not initialized")
             return []
