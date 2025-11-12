@@ -9,7 +9,7 @@ import io
 from datetime import datetime, timedelta
 
 from Log import Log, LogFlush, LogError
-from HelpersPackage import TimestampFilename
+from HelpersPackage import TimestampFilename, MessageBox
 
 
 class FTP:
@@ -354,7 +354,17 @@ class FTP:
             Log(f"FTP.FileExists(): FTP failure: retrying check of {filedir}")
             if not self.Reconnect():
                 return False
-            return self.FileExists(filedir)
+        # Try once more
+        try:
+            if filedir in self.g_ftp.nlst():
+                self.Log(f"FileExists('{filedir}') --> yes")
+                return True
+            self.Log(f"FileExists('{filedir}') --> no, it does not exist")
+            return False
+        except:
+            Log(f"FTP.FileExists(): FTP failed twice -- abandoning.")
+            MessageBox(f"Two attempts to see if {filedir} exists failed.  Exiting program.")
+            assert False
 
 
     #-------------------------------
