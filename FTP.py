@@ -321,6 +321,7 @@ class FTP:
     # ---------------------------------------------
     # Given a filename (possibly including a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
+        self.Log(f"FTP().FileExists('{filedir}') called")
         FTP._lastMessage=""  # Clear the last message
         if filedir == "/":
             self.Log(f"FileExists('{filedir}') --> of course it does.")
@@ -350,7 +351,7 @@ class FTP:
             self.Log(f"FileExists('{filedir}') --> no, it does not exist")
             return False
         except:
-            Log("'FTP.FileExists(): FTP failure: retrying")
+            Log(f"FTP.FileExists(): FTP failure: retrying check of {filedir}")
             if not self.Reconnect():
                 return False
             return self.FileExists(filedir)
