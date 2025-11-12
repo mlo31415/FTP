@@ -637,6 +637,7 @@ class FTP:
             else:
                 Log(f"***GetFileAsString(): SetDirectory('{directory}') failed. Bailing out...")
             return None
+        Log(f"GetFileAsString: {FTP().PWD()} / {fname}")
         s=FTP().GetAsString(fname)
         if s is None:
             Log(f"***FTP.GetFileAsString(): Could not load '{directory}/{fname}'")
