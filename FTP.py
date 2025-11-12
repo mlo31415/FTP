@@ -6,7 +6,6 @@ import os
 import tempfile
 import io
 
-from win32ctypes.pywin32.pywintypes import datetime
 from datetime import datetime, timedelta
 
 from Log import Log, LogFlush, LogError
