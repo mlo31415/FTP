@@ -319,7 +319,7 @@ class FTP:
 
 
     # ---------------------------------------------
-    # Given a filename (possibly includeing a complete path), does the file exist.  Note that a directory is treated as a file.
+    # Given a filename (possibly including a complete path), does the file exist.  Note that a directory is treated as a file.
     def FileExists(self, filedir: str) -> bool:
         FTP._lastMessage=""  # Clear the last message
         if filedir == "/":
