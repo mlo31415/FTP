@@ -47,18 +47,18 @@ class FTP:
     #----------------------------------------------
     # A special Log which only writes when FTP has logging turned on.
     # Used for debugging messages, b not error messages
-    def Log(self, s: str, noNewLine=False):
+    def Log(self, s: str, noNewLine=False) -> None:
         if FTP.g_dologging:
             Log(s, noNewLine)
 
 
-    def LoggingOff(self):
+    def LoggingOff(self) -> None:
         if FTP.g_dologging:
             Log("FTP Logging turned off")    # Only log a change of state
         FTP.g_dologging = False
 
 
-    def LoggingOn(self):
+    def LoggingOn(self) -> None:
         if not FTP.g_dologging:
             Log("FTP Logging turned on")    # Only log a change of state
         FTP.g_dologging = True
