@@ -577,11 +577,10 @@ class FTP:
             Log(f"FTP.BackupServerFile(): Could not set directory to '{path}'")
             return False
         path=path.replace("//", "/")
-        try:
-            return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
-        except error_perm as e:
-            Log(f"BackupServerFile('{pathname}'): could not read file to be backed up.  Will assume there is nothing needing backup.")
-        return True
+        if not FTP().FileExists(filename):
+            Log(f"BackupServerFile('{pathname}'): file does not exist, nothing to back up.")
+            return True
+        return FTP().CopyAndRenameFile(path, filename, path, TimestampFilename(filename))
 
 
 
