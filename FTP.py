@@ -350,7 +350,7 @@ class FTP:
                 return True
             self.Log(f"FileExists('{filedir}') --> no, it does not exist")
             return False
-        except:
+        except Exception:
             Log(f"FTP.FileExists(): FTP failure: retrying check of {filedir}")
             if not self.Reconnect():
                 return False
@@ -361,7 +361,7 @@ class FTP:
                 return True
             self.Log(f"FileExists('{filedir}') --> no, it does not exist")
             return False
-        except:
+        except Exception:
             Log(f"FTP.FileExists(): FTP failed twice -- abandoning.")
             MessageBox(f"Two attempts to see if {filedir} exists failed.  Exiting program.")
             assert False
