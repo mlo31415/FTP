@@ -9,7 +9,7 @@ import io
 from datetime import datetime, timedelta
 
 from Log import Log, LogFlush, LogError
-from HelpersPackage import TimestampFilename, MessageBox
+from HelpersPackage import TimestampFilename, MessageBox, Bailout
 
 
 class FTP:
