@@ -663,7 +663,7 @@ class FTP:
 
 
 #============================================================
-# A class to maintain acrude locking system on an FTP server
+# A class to maintain a crude locking system on an FTP server
 # Note that an FTP link must already be set up.
 class Lock:
 
