@@ -289,7 +289,6 @@ class FTP:
     # Given a complete path of the form "/xxx/yyy/zzz" (note leading "/"and no trailing "/"), or a relative path of the form "xxx" (note no slashes) does it exist?
     def PathExists(self, dirPath: str) -> bool:
         FTP._lastMessage=""  # Clear the last message
-        FTP._lastMessage=""   # Clear the last message
         dirPath=dirPath.replace("//", "/")
 
         dirPath=dirPath.strip()
