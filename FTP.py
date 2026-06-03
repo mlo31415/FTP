@@ -431,6 +431,7 @@ class FTP:
             except Exception as e:
                 Log(f"FTP.PutString(): FTP connection failure. Exception={e}")
                 if not self.Reconnect():
+                    Log(f"FTP.PutString(): Reconnection failed. Exiting PutString()")
                     return False
                 self.Log(self.g_ftp.storbinary("STOR "+fname, f))
             return True
@@ -456,6 +457,7 @@ class FTP:
             except Exception as e:
                 Log(f"FTP.AppendString(): FTP connection failure. Exception={e}")
                 if not self.Reconnect():
+                    Log(f"FTP.AppendString(): Reconnection failed. Exiting AppendString()")
                     return False
                 self.Log(self.g_ftp.storbinary("APPE "+fname, f))
             return True
@@ -580,6 +582,7 @@ class FTP:
                 except Exception as e:
                     Log("FTP.PutFile(): FTP connection failure. Exception="+str(e))
                     if not self.Reconnect():
+                        Log(f"FTP.PutFile(): Reconnection failed. Exiting PutFile()")
                         return False
                     self.Log(self.g_ftp.storbinary("STOR "+toname, f))
         except Exception as e:
@@ -611,6 +614,7 @@ class FTP:
         except Exception as e:
             Log(f"FTP.GetAsString(): FTP connection failure. Exception={e}")
             if not self.Reconnect():
+                Log(f"FTP.GetAsString(): Reconnection failed. Exiting GetAsString()")
                 fd.cleanup()
                 return None
             msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
