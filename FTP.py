@@ -16,7 +16,7 @@ class FTP:
     g_ftp: ftplib.FTP=None      # A single FTP link for all instances of the class
     g_curdirpath: str="/"
     g_credentials: dict={}      # Saves the credentials for reconnection if the server times out
-    g_dologging: bool=True      # Turn on logging of useful debugging information
+    g_dologging: bool=False      # Set FTP logging of useful debugging information by default
     _lastMessage: str=""         # Holds the last error message
 
 
