@@ -171,7 +171,7 @@ class FTP:
         if len(fname.strip()) == 0:
             Log("FTP.DeleteFile(): filename not supplied.")
             LogFlush()
-            assert False
+            raise ValueError("Filename cannot be empty")
 
         if not self.FileExists(fname):
             Log("FTP.DeleteFile: '"+fname+"' does not exist.")
@@ -199,7 +199,7 @@ class FTP:
         if len(oldname.strip()) == 0 or len(newname.strip()) == 0:
             Log("FTP.Rename(): oldname or newname not supplied. Probably irrecoverable, so exiting program.")
             LogFlush()
-            assert False
+            raise ValueError("Neither oldname nor new name can be empty")
 
         if not self.FileExists(oldname):
             msg=f"FTP.Rename: '{oldname}' does not exist."
@@ -232,10 +232,10 @@ class FTP:
         if len(dirname.strip()) == 0:
             Log("FTP.DeleteDir(): dirname not supplied.")
             LogFlush()
-            assert False        # This should never happen.
+            raise NotImplementedError("And they said this could never happen...")        # This should never happen.
         if dirname == "/":
             Log("FTP.DeleteDir(): Attempt to delete root -- forbidden")
-            assert False
+            raise PermissionError("Attempt to delete root directory")
 
         if not self.FileExists(dirname):
             Log(f"FTP.DeleteDir(): '{dirname}' does not exist.")
@@ -297,7 +297,7 @@ class FTP:
         if not self.ComparePaths(FTP.g_curdirpath,  dir):
             Log(f"***PWD(): error detected -- self._curdirpath='{FTP.g_curdirpath}' and pwd returns '{dir}'")
             Log("***Probably irrecoverable, so exiting program.")
-            assert False
+            raise NotImplementedError("This really shouldn't haev happened...")        # This should never happen.
 
         return dir
 
@@ -373,7 +373,7 @@ class FTP:
                     return False
         Log(f"FTP.FileExists(): failed after all attempts -- abandoning.")
         MessageBox(f"Two attempts to see if {filedir} exists failed.  Exiting program.")
-        assert False
+        raise NotImplementedError("Beats the hell outta me what happened...")  # This should never happen.
 
 
     #-------------------------------
