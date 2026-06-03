@@ -125,17 +125,17 @@ class FTP:
             return True
 
         msg=""
-        try:
-            msg=self.g_ftp.cwd(newdir)
-        except Exception as e:
-            self.Log(f"***FTP.CWD(): FTP connection failure. Exception={e}")
-            if not self.Reconnect():
-                return False
+        for attempt in range(2):
             try:
                 msg=self.g_ftp.cwd(newdir)
+                break
             except Exception as e:
-                self.Log(f"***g_ftp.cwd('{newdir}'): FTP connection failure. Exception={e}")
-                return False
+                self.Log(f"***FTP.CWD(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return False
+        else:
+            self.Log(f"***FTP.CWD('{newdir}'): failed after all attempts")
+            return False
 
         self.Log(msg)
         ret=msg.startswith("250 OK.")
@@ -149,13 +149,17 @@ class FTP:
     # Make a new child directory named <newdir> in the current directory
     def MKD(self, newdir: str) -> bool:
         self.Log("**make directory: '"+newdir+"'")
-        try:
-            msg=self.g_ftp.mkd(newdir)
-        except Exception as e:
-            Log("FTP.MKD(): FTP connection failure. Exception="+str(e))
-            if not self.Reconnect():
-                return False
-            msg=self.g_ftp.mkd(newdir)
+        msg=""
+        for attempt in range(2):
+            try:
+                msg=self.g_ftp.mkd(newdir)
+                break
+            except Exception as e:
+                Log(f"FTP.MKD(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return False
+        else:
+            return False
         self.Log(msg+"\n")
         return msg == newdir or msg.startswith("250 ") or msg.startswith("257 ")     # Web doc shows all three as possible.
 
@@ -173,13 +177,17 @@ class FTP:
             Log("FTP.DeleteFile: '"+fname+"' does not exist.")
             return True
 
-        try:
-            msg=self.g_ftp.delete(fname)
-        except Exception as e:
-            Log("FTP connection failure. Exception="+str(e))
-            if not self.Reconnect():
-                return False
-            msg=self.g_ftp.delete(fname)
+        msg=""
+        for attempt in range(2):
+            try:
+                msg=self.g_ftp.delete(fname)
+                break
+            except Exception as e:
+                Log(f"FTP.DeleteFile(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return False
+        else:
+            return False
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
@@ -199,15 +207,18 @@ class FTP:
             Log(msg)
             return False
 
-        try:
-            msg=self.g_ftp.rename(oldname, newname)
-            FTP._lastMessage=msg
-        except Exception as e:
-            Log(f"FTP.Rename: FTP connection failure. Exception={e}")
-            if not self.Reconnect():
-                return False
-            msg=self.g_ftp.rename(oldname, newname)
-            FTP._lastMessage=msg
+        msg=""
+        for attempt in range(2):
+            try:
+                msg=self.g_ftp.rename(oldname, newname)
+                FTP._lastMessage=msg
+                break
+            except Exception as e:
+                Log(f"FTP.Rename: attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return False
+        else:
+            return False
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
@@ -235,16 +246,18 @@ class FTP:
         for file in files:
             self.DeleteFile(file)
 
-        try:
-            msg=self.g_ftp.rmd(dirname)
-            FTP._lastMessage=msg
-        except Exception as e:
-            Log(f"FTP.DeleteDir(): FTP connection failure. Exception={e}")
-            if not self.Reconnect():
-                return False
-            msg=self.g_ftp.rmd(dirname)
-            FTP._lastMessage=msg
-
+        msg=""
+        for attempt in range(2):
+            try:
+                msg=self.g_ftp.rmd(dirname)
+                FTP._lastMessage=msg
+                break
+            except Exception as e:
+                Log(f"FTP.DeleteDir(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return False
+        else:
+            return False
         self.Log(msg+"\n")
         return msg.startswith("250 ")
 
@@ -265,13 +278,17 @@ class FTP:
     # ---------------------------------------------
     # Returns the full path to the current directory as a string
     def PWD(self) -> str:
-        try:
-            dir=self.g_ftp.pwd()
-        except Exception as e:
-            Log("PWD(): FTP connection failure. Exception="+str(e))
-            if not self.Reconnect():
-                return ""
-            dir=self.g_ftp.pwd()
+        dir=""
+        for attempt in range(2):
+            try:
+                dir=self.g_ftp.pwd()
+                break
+            except Exception as e:
+                Log(f"PWD(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return ""
+        else:
+            return ""
         self.Log("PWD() --> '"+dir+"'")
 
         # Check to see if this matches what self._curdirpath thinks it ought to
@@ -343,27 +360,20 @@ class FTP:
                 return False
             self.CWD(path)
 
-        try:
-            if filedir in self.g_ftp.nlst():
-                self.Log(f"FileExists('{filedir}') --> yes")
-                return True
-            self.Log(f"FileExists('{filedir}') --> no, it does not exist")
-            return False
-        except Exception:
-            Log(f"FTP.FileExists(): FTP failure: retrying check of {filedir}")
-            if not self.Reconnect():
+        for attempt in range(2):
+            try:
+                if filedir in self.g_ftp.nlst():
+                    self.Log(f"FileExists('{filedir}') --> yes")
+                    return True
+                self.Log(f"FileExists('{filedir}') --> no, it does not exist")
                 return False
-        # Try once more
-        try:
-            if filedir in self.g_ftp.nlst():
-                self.Log(f"FileExists('{filedir}') --> yes")
-                return True
-            self.Log(f"FileExists('{filedir}') --> no, it does not exist")
-            return False
-        except Exception:
-            Log(f"FTP.FileExists(): FTP failed twice -- abandoning.")
-            MessageBox(f"Two attempts to see if {filedir} exists failed.  Exiting program.")
-            assert False
+            except Exception:
+                Log(f"FTP.FileExists(): attempt {attempt+1} failed: retrying check of {filedir}")
+                if not self.Reconnect():
+                    return False
+        Log(f"FTP.FileExists(): failed after all attempts -- abandoning.")
+        MessageBox(f"Two attempts to see if {filedir} exists failed.  Exiting program.")
+        assert False
 
 
     #-------------------------------
@@ -425,14 +435,17 @@ class FTP:
             f.seek(0)
 
             self.Log("STOR "+fname+"  from "+f.name)
-            try:
-                self.Log(self.g_ftp.storbinary("STOR "+fname, f))
-            except Exception as e:
-                Log(f"FTP.PutString(): FTP connection failure. Exception={e}")
-                if not self.Reconnect():
-                    Log(f"FTP.PutString(): Reconnection failed. Exiting PutString()")
-                    return False
-                self.Log(self.g_ftp.storbinary("STOR "+fname, f))
+            for attempt in range(2):
+                f.seek(0)
+                try:
+                    self.Log(self.g_ftp.storbinary("STOR "+fname, f))
+                    break
+                except Exception as e:
+                    Log(f"FTP.PutString(): attempt {attempt+1} failed. Exception={e}")
+                    if not self.Reconnect():
+                        return False
+            else:
+                return False
             return True
 
 
@@ -451,14 +464,17 @@ class FTP:
             f.seek(0)
 
             self.Log("STOR "+fname+"  from "+f.name)
-            try:
-                self.Log(self.g_ftp.storbinary("APPE "+fname, f))
-            except Exception as e:
-                Log(f"FTP.AppendString(): FTP connection failure. Exception={e}")
-                if not self.Reconnect():
-                    Log(f"FTP.AppendString(): Reconnection failed. Exiting AppendString()")
-                    return False
-                self.Log(self.g_ftp.storbinary("APPE "+fname, f))
+            for attempt in range(2):
+                f.seek(0)
+                try:
+                    self.Log(self.g_ftp.storbinary("APPE "+fname, f))
+                    break
+                except Exception as e:
+                    Log(f"FTP.AppendString(): attempt {attempt+1} failed. Exception={e}")
+                    if not self.Reconnect():
+                        return False
+            else:
+                return False
             return True
 
 
@@ -503,19 +519,21 @@ class FTP:
         temp: bytearray=bytearray(0)
 
         self.Log(f"RETR '{oldfilename}' from '{oldpathname}'")
-        ret="No message returned by retrbinary()"
-        try:
-            ret=self.g_ftp.retrbinary(f"RETR {oldfilename.replace(' ', '%20')}", lambda data: temp.extend(data))
-            self.Log(ret)
-        except error_perm as e:
-            Log(ret)
-            Log(f"FTP.CopyAndRenameFile().retrbinary(): Exception={e}", isError=True)
-            if not self.Reconnect():
-                if IgnoreMissingFile:
-                    return True
-                return False
-            ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
-            self.Log(ret)
+        ret="**No message returned by retrbinary()**"
+        for attempt in range(2):
+            try:
+                ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
+                self.Log(ret)
+                break
+            except error_perm as e:
+                Log(f"FTP.CopyAndRenameFile().retrbinary(): attempt {attempt+1} failed: {e}", isError=True)
+                if not self.Reconnect():
+                    if IgnoreMissingFile:
+                        return True
+                    return False
+        else:
+            Log("FTP.CopyAndRenameFile(): retrbinary failed after all attempts", isError=True)
+            return False
 
         if not self.IsSuccess(ret):
             Log(ret, isError=True)
@@ -534,15 +552,17 @@ class FTP:
         if newfilename is None:
             newfilename=oldfilename
 
-        try:
-            ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
-            self.Log(ret)
-        except Exception as e:
-            Log(f"FTP.CopyAndRenameFile().PutFile(): FTP connection failure. Exception={e}")
-            if not self.Reconnect():
-                return False
-            ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
-            self.Log(ret)
+        for attempt in range(2):
+            try:
+                ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
+                self.Log(ret)
+                break
+            except Exception as e:
+                Log(f"FTP.CopyAndRenameFile().storbinary(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    return False
+        else:
+            return False
         return True
 
 
@@ -576,14 +596,17 @@ class FTP:
         self.Log("STOR "+toname+"  from "+pathname)
         try:
             with open(pathname, "rb") as f:
-                try:
-                    self.Log(self.g_ftp.storbinary("STOR "+toname, f))
-                except Exception as e:
-                    Log("FTP.PutFile(): FTP connection failure. Exception="+str(e))
-                    if not self.Reconnect():
-                        Log(f"FTP.PutFile(): Reconnection failed. Exiting PutFile()")
-                        return False
-                    self.Log(self.g_ftp.storbinary("STOR "+toname, f))
+                for attempt in range(2):
+                    f.seek(0)
+                    try:
+                        self.Log(self.g_ftp.storbinary("STOR "+toname, f))
+                        break
+                    except Exception as e:
+                        Log(f"FTP.PutFile(): attempt {attempt+1} failed. Exception={e}")
+                        if not self.Reconnect():
+                            return False
+                else:
+                    return False
         except Exception as e:
             Log(f"FTP.PutFile(): Exception on Open('{pathname}', 'rb') ")
             Log(str(e))
@@ -608,15 +631,22 @@ class FTP:
         # Download the file into the temporary file
         tempfname=os.path.join(fd.name, "tempfile")
         f=open(tempfname, "wb+")
-        try:
-            msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
-        except Exception as e:
-            Log(f"FTP.GetAsString(): FTP connection failure. Exception={e}")
-            if not self.Reconnect():
-                Log(f"FTP.GetAsString(): Reconnection failed. Exiting GetAsString()")
-                fd.cleanup()
-                return None
-            msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
+        msg=""
+        for attempt in range(2):
+            f.seek(0)
+            f.truncate(0)
+            try:
+                msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
+                break
+            except Exception as e:
+                Log(f"FTP.GetAsString(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():
+                    fd.cleanup()
+                    return None
+        else:
+            Log("FTP.GetAsString(): failed after all attempts")
+            fd.cleanup()
+            return None
         self.Log(msg)
         if not msg.startswith("226"):
             Log("FTP.GetAsString(): failed")
