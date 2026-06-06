@@ -614,6 +614,44 @@ class FTP:
 
 
     #-------------------------------
+    # Download the (binary) file named fname in directory on fanac.org to the local file localpath
+    def GetFile(self, directory: str, fname: str, localpath: str) -> bool:
+        FTP._lastMessage=""  # Clear the last message
+        if self.g_ftp is None:
+            Log("FTP.GetFile(): FTP not initialized")
+            return False
+
+        if not self.SetDirectory(directory):
+            Log(f"***FTP.GetFile(): SetDirectory('{directory}') failed. Bailing out...")
+            return False
+        if not self.FileExists(fname):
+            Log(f"FTP.GetFile(): '{fname}' does not exist.")
+            return False
+
+        self.Log("RETR "+fname+"  to "+localpath)
+        msg=""
+        try:
+            with open(localpath, "wb") as f:
+                for attempt in range(2):
+                    f.seek(0)
+                    f.truncate(0)
+                    try:
+                        msg=self.g_ftp.retrbinary("RETR "+fname, f.write)
+                        break
+                    except Exception as e:
+                        Log(f"FTP.GetFile(): attempt {attempt+1} failed. Exception={e}")
+                        if not self.Reconnect():
+                            return False
+                else:
+                    return False
+        except Exception as e:
+            Log(f"FTP.GetFile(): Exception writing '{localpath}': {e}")
+            return False
+        self.Log(msg)
+        return msg.startswith("226")
+
+
+    #-------------------------------
     # Download the ascii file named fname in the current directory on fanac.org into a string
     def GetAsString(self, fname: str) -> str|None:
         FTP._lastMessage=""  # Clear the last message
