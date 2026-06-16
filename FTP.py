@@ -353,12 +353,14 @@ class FTP:
             path="/".join(filedir.split("/")[:-1])
             filedir=filedir.split("/")[-1]
 
-        # Make sure we're at the path
+        # Make sure we're at the path. SetDirectory walks it one component at a time (correct at any
+        # depth) and leaves us in it. The older PathExists()+CWD() combination mishandled multi-component
+        # *relative* paths -- it left the CWD at the parent and then re-applied the whole path relatively
+        # -- which broke 3+ level paths such as a sub-page's "/series/con/subpage/...".
         if len(path) > 0:
-            if not self.PathExists(path):
+            if not self.SetDirectory(path):
                 self.Log(f"FileExists('{filedir}') --> path '{path}' does not exist")
                 return False
-            self.CWD(path)
 
         for attempt in range(2):
             try:
