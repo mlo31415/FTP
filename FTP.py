@@ -70,7 +70,17 @@ class FTP:
         self.Log("Reconnect attempted")
         if len(FTP.g_credentials) == 0:
             return False
-        FTP.g_ftp=ftplib.FTP_TLS(host=FTP.g_credentials["host"], user=FTP.GetEditor(), passwd=FTP.g_credentials["PW"])
+        host=FTP.g_credentials["host"]
+        try:
+            FTP.g_ftp=ftplib.FTP_TLS(host=host, user=FTP.GetEditor(), passwd=FTP.g_credentials["PW"], timeout=30)
+        except OSError as e:
+            Log(f"***FTP.Reconnect failed to connect to {host}: {e}")
+            MessageBox(f"Could not connect to the FTP server '{host}'.\n\n{e}\n\n"
+                       f"The connection timed out or was refused, so no FTP work can be done.\n"
+                       f"Check that you have a network connection and that '{host}' is the correct "
+                       f"FTP server name in 'FTP Credentials.json' (note: a host fronted by Cloudflare "
+                       f"will answer web requests but not FTP).", ignoredebugger=True, Title="FTP connection failed")
+            return False
         FTP.g_ftp.prot_p()
 
         # Now we need to restore the current working directory
