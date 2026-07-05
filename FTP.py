@@ -440,17 +440,23 @@ class FTP:
             Log("FTP.PutString(): FTP not initialized")
             return False
 
+        data=bytes(s, 'utf-8')
         with tempfile.TemporaryFile() as f:
 
             # Save the string as a local temporary file, then rewind so it can be read
-            f.write(bytes(s, 'utf-8'))
+            f.write(data)
             f.seek(0)
 
             self.Log("STOR "+fname+"  from "+f.name)
             for attempt in range(2):
                 f.seek(0)
                 try:
-                    self.Log(self.g_ftp.storbinary("STOR "+fname, f))
+                    ret=self.g_ftp.storbinary("STOR "+fname, f)
+                    self.Log(ret)
+                    if not self.IsSuccess(ret):
+                        Log(f"FTP.PutString('{fname}'): server did not report success: {ret}", isError=True)
+                        FTP._lastMessage=ret
+                        return False
                     break
                 except Exception as e:
                     Log(f"FTP.PutString(): attempt {attempt+1} failed. Exception={e}")
@@ -458,7 +464,8 @@ class FTP:
                         return False
             else:
                 return False
-            return True
+            # Make sure the server actually received all the bytes (catches zero-size/truncated uploads)
+            return self.VerifyUploadedSize(fname, len(data))
 
 
     #-------------------------------
@@ -479,7 +486,12 @@ class FTP:
             for attempt in range(2):
                 f.seek(0)
                 try:
-                    self.Log(self.g_ftp.storbinary("APPE "+fname, f))
+                    ret=self.g_ftp.storbinary("APPE "+fname, f)
+                    self.Log(ret)
+                    if not self.IsSuccess(ret):
+                        Log(f"FTP.AppendString('{fname}'): server did not report success: {ret}", isError=True)
+                        FTP._lastMessage=ret
+                        return False
                     break
                 except Exception as e:
                     Log(f"FTP.AppendString(): attempt {attempt+1} failed. Exception={e}")
@@ -501,12 +513,32 @@ class FTP:
 
     # -------------------------------
     # Return True if a message is recognized as an FTP success message; False otherwise
+    # Any 2xx completion reply is success (e.g. "226 Transfer complete", "226-File successfully transferred");
+    # matching literal message text is too fragile across servers.
     def IsSuccess(self, ret: str) -> bool:
-        successMessages=[
-            "226-File successfully transferred",
-        ]
-        ret=ret.split("\n")[0]      # Just want the 1st line if there are many
-        return any([x == ret for x in successMessages])
+        if ret is None or ret == "":
+            return False
+        return ret.split("\n")[0].strip().startswith("2")
+
+
+    # -------------------------------
+    # After an upload, ask the server how big the file it received is and compare with what we sent.
+    # This catches truncated transfers (e.g. zero-length files) that completed with a success reply.
+    # If the server doesn't support SIZE, log it and pass -- the response-code check still applies.
+    def VerifyUploadedSize(self, fname: str, expected: int) -> bool:
+        try:
+            actual=self.g_ftp.size(fname)
+        except Exception as e:
+            self.Log(f"VerifyUploadedSize: SIZE '{fname}' failed ({e}); skipping size verification")
+            return True
+        if actual is None:
+            return True
+        if actual != expected:
+            msg=f"'{fname}' arrived on the server as {actual} bytes but should be {expected} bytes -- the upload was corrupted or truncated"
+            Log("FTP.VerifyUploadedSize: "+msg, isError=True)
+            FTP._lastMessage=msg
+            return False
+        return True
 
 
     #-------------------------------
@@ -568,6 +600,10 @@ class FTP:
             try:
                 ret=self.g_ftp.storbinary(f"STOR {newfilename}", io.BytesIO(temp))
                 self.Log(ret)
+                if not self.IsSuccess(ret):
+                    Log(f"FTP.CopyAndRenameFile('{newfilename}'): server did not report success: {ret}", isError=True)
+                    FTP._lastMessage=ret
+                    return False
                 break
             except Exception as e:
                 Log(f"FTP.CopyAndRenameFile().storbinary(): attempt {attempt+1} failed. Exception={e}")
@@ -575,7 +611,8 @@ class FTP:
                     return False
         else:
             return False
-        return True
+        # Make sure the server actually received all the bytes (catches zero-size/truncated uploads)
+        return self.VerifyUploadedSize(newfilename, len(temp))
 
 
     #-------------------------------
@@ -610,7 +647,12 @@ class FTP:
                 for attempt in range(2):
                     f.seek(0)
                     try:
-                        self.Log(self.g_ftp.storbinary("STOR "+toname, f))
+                        ret=self.g_ftp.storbinary("STOR "+toname, f)
+                        self.Log(ret)
+                        if not self.IsSuccess(ret):
+                            Log(f"FTP.PutFile('{toname}'): server did not report success: {ret}", isError=True)
+                            FTP._lastMessage=ret
+                            return False
                         break
                     except Exception as e:
                         Log(f"FTP.PutFile(): attempt {attempt+1} failed. Exception={e}")
@@ -622,7 +664,8 @@ class FTP:
             Log(f"FTP.PutFile(): Exception on Open('{pathname}', 'rb') ")
             Log(str(e))
             return False
-        return True
+        # Make sure the server actually received all the bytes (catches zero-size/truncated uploads)
+        return self.VerifyUploadedSize(toname, os.path.getsize(pathname))
 
 
     #-------------------------------
