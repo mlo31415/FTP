@@ -569,7 +569,10 @@ class FTP:
                 ret=self.g_ftp.retrbinary(f"RETR {oldfilename}", lambda data: temp.extend(data))
                 self.Log(ret)
                 break
-            except error_perm as e:
+            except Exception as e:
+                # Note: this must catch more than error_perm -- after a laptop sleep/wake the dead socket
+                # raises OSError/EOFError/SSLError here, and this (via BackupServerFile) is the first step
+                # of every upload.
                 Log(f"FTP.CopyAndRenameFile().retrbinary(): attempt {attempt+1} failed: {e}", isError=True)
                 if not self.Reconnect():
                     if IgnoreMissingFile:
@@ -788,26 +791,33 @@ class FTP:
 # Note that an FTP link must already be set up.
 class Lock:
 
-    # Lock returns False if there is already a lock in place; returns True and sets a lock if there is no lock or the lock has expired
+    # Returns "" if a lock was set (there was no lock, it was ours, or it had expired).
+    # Otherwise returns a message explaining why the lock could not be set. Never raises: the caller has a
+    # "proceed anyway?" recovery path which must get a chance to run.
     def SetLock(self, path: str, id: str) -> str:
+
+        def TryMakeLock() -> str:
+            if self.MakeLock(path, id):
+                return ""
+            return f"Could not write the lock file to {path} (a server or connection problem: {FTP().LastMessage})"
 
         lockid, lockdate=self.GetLock(path)
         if lockid == "":
             # There is none. So set a lock for me
-            self.MakeLock(path, id)
-            return ""
+            return TryMakeLock()
 
         # If a lock exists, but is my own id or is a blank id, we always override it and write a new lock.
         if lockid == id or lockid == "":
-            self.MakeLock(path, id)
-            return ""
+            return TryMakeLock()
 
         # If it's not my lock, see if it has expired
-        lockdate=datetime.strptime(lockdate, '%Y-%m-%d %H:%M:%S')
+        try:
+            lockdate=datetime.strptime(lockdate, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            return TryMakeLock()        # A malformed lock file: treat it as expired and override it
         if datetime.now()-lockdate > timedelta(hours=12):
             # It has expired -- override it
-            self.MakeLock(path, id)
-            return ""
+            return TryMakeLock()
 
         # OK, it's locked by someone else
         return f"Locked by {lockid} on {lockdate:%Y-%m-%d} at {lockdate:%H:%M:%S}"
@@ -823,10 +833,13 @@ class Lock:
         return (lockbits[0], lockbits[1])
 
 
-    def MakeLock(self, path: str, id: str):
+    # Write the lock file. Returns False on failure (e.g. a dropped connection) -- it must NOT raise, since
+    # a failure to lock at startup has a user-facing "proceed anyway?" recovery path in the caller.
+    def MakeLock(self, path: str, id: str) -> bool:
         if not FTP().PutString(f"/{path}/Lock", f"{id}={datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"):
-            LogError(f"SetLock('{path}', '{id}') failed")
-            raise Exception(f"SetLock('{path}', '{id}') failed")
+            LogError(f"MakeLock('{path}', '{id}') failed")
+            return False
+        return True
 
 
     # Release my lock.
@@ -838,7 +851,7 @@ class Lock:
         if lock is None:
             return True
 
-        lockid, lockdate=lock.split("=", 1)
+        lockid=lock.split("=", 1)[0]        # (The lock file might be malformed and contain no "=")
 
         # If it's my own lock, we always override it.  Otherwise, we always leave it.
         if lockid == id:
