@@ -1,0 +1,31 @@
+# Secrets -- never commit
+FTP Credentials.json
+
+# Python virtual environment
+venv/
+.venv/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+
+# IDE
+.idea/
+
+# Runtime logs
+Log -- *.txt
+Log (Errors) -- *.txt
+*.log
+
+# Symlinks to shared packages -- machine-specific, regenerated locally by mklinksHelpers.bat.
+# Do NOT commit these: they point to absolute paths on the dev's machine and would check out as
+# broken stubs elsewhere. The mklinksHelpers.bat script (which IS committed) recreates them.
+HelpersPackage.py
+Log.py
+PDFHelpers.py
+
+# Local-only leftovers (kept on this machine, not part of the repo)
+FTP.py (hidden)
+# ...and a stray copied in from a project that *uses* this package: run here it would delete this
+# repo's own FTP.py and replace it with a symlink to itself.
+mklinksFTP.bat
