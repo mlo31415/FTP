@@ -748,9 +748,21 @@ class FTP:
             fd.cleanup()
             return None
 
-        with open(tempfname, "r", encoding='utf8') as f:
-            out=f.readlines()
-        out="".join(out)    # Rejoin into a string
+        # Nearly every page is UTF-8, but some legacy pages are genuinely Windows-1252/ISO-8859-1 (they say so
+        # in their own charset declaration) and contain accented characters. Decoding one of those as UTF-8
+        # raises, which would abort the entire load, so fall back instead of failing. Note that we never decode
+        # with errors="replace": that silently replaces the accented characters, and the damaged text would
+        # then be written back to the server on the next upload.
+        out=None
+        for encoding in ("utf-8", "cp1252", "latin-1"):     # latin-1 accepts any byte, so this always succeeds
+            try:
+                with open(tempfname, "r", encoding=encoding) as f:
+                    out=f.read()
+                if encoding != "utf-8":
+                    Log(f"FTP.GetAsString(): '{fname}' is not valid UTF-8; read it as {encoding} instead.")
+                break
+            except UnicodeDecodeError:
+                continue
         fd.cleanup()
         return out
 
