@@ -85,9 +85,22 @@ class FTP:
         if len(FTP.g_credentials) == 0:
             return False
         host=FTP.g_credentials["host"]
+        # Close the old (usually dead) connection first. close(), not quit(): quit() waits for the server's answer, and on
+        # a dead connection that takes the whole timeout.
+        if FTP.g_ftp is not None:
+            try:
+                FTP.g_ftp.close()
+            except Exception:
+                pass
+        # Any FTP error, not just a network one: a server refusing ("421 Too many connections", "530 Login incorrect")
+        # used to escape from here as an unexpected exception.
         try:
             FTP.g_ftp=ftplib.FTP_TLS(host=host, user=FTP.GetEditor(), passwd=FTP.g_credentials["PW"], timeout=30)
-        except OSError as e:
+            FTP.g_ftp.prot_p()
+            # Now we need to restore the current working directory
+            self.Log("Reconnect: g_ftp.cwd('/')")
+            msg=self.g_ftp.cwd("/")
+        except ftplib.all_errors as e:
             Log(f"***FTP.Reconnect failed to connect to {host}: {e}")
             ShowFTPError(f"Could not connect to the FTP server '{host}'.\n\n{e}\n\n"
                          f"The connection timed out or was refused, so no FTP work can be done.\n"
@@ -95,11 +108,6 @@ class FTP:
                          f"FTP server name in 'FTP Credentials.json' (note: a host fronted by Cloudflare "
                          f"will answer web requests but not FTP).", "FTP connection failed")
             return False
-        FTP.g_ftp.prot_p()
-
-        # Now we need to restore the current working directory
-        self.Log("Reconnect: g_ftp.cwd('/')")
-        msg=self.g_ftp.cwd("/")
         self.Log(msg)
         ret=msg.startswith("250 OK.")
         if not ret:
@@ -396,7 +404,7 @@ class FTP:
             except Exception:
                 Log(f"FTP.FileExists(): attempt {attempt+1} failed: retrying check of {filedir}")
                 if not self.Reconnect():
-                    return False
+                    break       # (Not "no, it doesn't exist": see below)
         # Answering "no" would be wrong -- callers check before creating or overwriting -- so stop what's being done.
         # (No message box here: the caller's error handler reports it, with a parent so it can't hide behind a window)
         Log(f"FTP.FileExists(): failed after all attempts -- abandoning.")
@@ -565,7 +573,7 @@ class FTP:
 
     #-------------------------------
     # Copy a file from one directory on the server to another. Rename the file if newfilename != ""
-    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str=None, Create: bool=False, IgnoreMissingFile: bool=False) -> bool:
+    def CopyAndRenameFile(self, oldpathname: str, oldfilename: str, newpathname: str, newfilename: str=None, Create: bool=False) -> bool:
         FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.CopyAndRenameFile(): FTP not initialized", isError=True)
@@ -591,8 +599,6 @@ class FTP:
                 # of every upload.
                 Log(f"FTP.CopyAndRenameFile().retrbinary(): attempt {attempt+1} failed: {e}", isError=True)
                 if not self.Reconnect():
-                    if IgnoreMissingFile:
-                        return True
                     return False
         else:
             Log("FTP.CopyAndRenameFile(): retrbinary failed after all attempts", isError=True)
