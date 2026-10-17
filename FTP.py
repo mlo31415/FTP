@@ -12,6 +12,20 @@ from Log import Log, LogFlush, LogError
 from HelpersPackage import TimestampFilename, MessageBox, Bailout
 
 
+# Report an FTP failure. In a wx program the box gets the main window as its parent and stays on top: a parentless box
+# can open behind the program's windows, invisible but still blocking them all, so the program looks hung.
+def ShowFTPError(msg: str, title: str) -> None:
+    try:
+        import wx
+        app=wx.GetApp()
+    except ImportError:
+        app=None
+    if app is None:
+        MessageBox(msg, ignoredebugger=True, Title=title)
+        return
+    wx.MessageBox(msg, title, wx.OK|wx.ICON_WARNING|wx.STAY_ON_TOP, parent=app.GetTopWindow())
+
+
 class FTP:
     g_ftp: ftplib.FTP=None      # A single FTP link for all instances of the class
     g_curdirpath: str="/"
@@ -75,11 +89,11 @@ class FTP:
             FTP.g_ftp=ftplib.FTP_TLS(host=host, user=FTP.GetEditor(), passwd=FTP.g_credentials["PW"], timeout=30)
         except OSError as e:
             Log(f"***FTP.Reconnect failed to connect to {host}: {e}")
-            MessageBox(f"Could not connect to the FTP server '{host}'.\n\n{e}\n\n"
-                       f"The connection timed out or was refused, so no FTP work can be done.\n"
-                       f"Check that you have a network connection and that '{host}' is the correct "
-                       f"FTP server name in 'FTP Credentials.json' (note: a host fronted by Cloudflare "
-                       f"will answer web requests but not FTP).", ignoredebugger=True, Title="FTP connection failed")
+            ShowFTPError(f"Could not connect to the FTP server '{host}'.\n\n{e}\n\n"
+                         f"The connection timed out or was refused, so no FTP work can be done.\n"
+                         f"Check that you have a network connection and that '{host}' is the correct "
+                         f"FTP server name in 'FTP Credentials.json' (note: a host fronted by Cloudflare "
+                         f"will answer web requests but not FTP).", "FTP connection failed")
             return False
         FTP.g_ftp.prot_p()
 
@@ -383,9 +397,11 @@ class FTP:
                 Log(f"FTP.FileExists(): attempt {attempt+1} failed: retrying check of {filedir}")
                 if not self.Reconnect():
                     return False
+        # Answering "no" would be wrong -- callers check before creating or overwriting -- so stop what's being done.
+        # (No message box here: the caller's error handler reports it, with a parent so it can't hide behind a window)
         Log(f"FTP.FileExists(): failed after all attempts -- abandoning.")
-        MessageBox(f"Two attempts to see if {filedir} exists failed.  Exiting program.")
-        raise NotImplementedError("Beats the hell outta me what happened...")  # This should never happen.
+        raise ConnectionError(f"Lost the connection to the FTP server while checking whether '{filedir}' exists. "
+                              f"Nothing more was done; check the network connection and try again.")
 
 
     #-------------------------------
