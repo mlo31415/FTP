@@ -817,7 +817,17 @@ class FTP:
             Log("FTP.Nlst(): Bailing out...")
             return []
 
-        return [x for x in self.g_ftp.nlst() if x != "." and x != ".."] # Ignore the . and .. elements
+        for attempt in range(2):
+            try:
+                return [x for x in self.g_ftp.nlst() if x != "." and x != ".."] # Ignore the . and .. elements
+            except Exception as e:
+                Log(f"FTP.Nlst(): attempt {attempt+1} failed. Exception={e}")
+                if not self.Reconnect():        # (Which puts us back in the directory)
+                    break
+        # Answering "it's empty" would be wrong -- callers copy or delete what's listed -- so stop what's being done
+        Log(f"FTP.Nlst(): failed after all attempts -- abandoning.")
+        raise ConnectionError(f"Lost the connection to the FTP server while listing '{directory}'. "
+                              f"Nothing more was done; check the network connection and try again.")
 
 
 #============================================================
