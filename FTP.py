@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import io
+from collections.abc import Callable
 
 from datetime import datetime, timedelta
 
@@ -660,7 +661,8 @@ class FTP:
 
     #-------------------------------
     # Copy the local file fname to fanac.org in the current directory and with the same thisrow
-    def PutFile(self, pathname: str, toname: str) -> bool:
+    # progress, if given, is called as each block is sent, with (bytes sent so far, the file's size)
+    def PutFile(self, pathname: str, toname: str, progress: Callable[[int, int], None]|None=None) -> bool:
         FTP._lastMessage=""  # Clear the last message
         if self.g_ftp is None:
             Log("FTP.PutFile(): FTP not initialized")
@@ -669,10 +671,16 @@ class FTP:
         self.Log("STOR "+toname+"  from "+pathname)
         try:
             with open(pathname, "rb") as f:
+                size=os.path.getsize(pathname)
                 for attempt in range(2):
                     f.seek(0)
+                    sent=0
+                    def Sent(block: bytes) -> None:
+                        nonlocal sent
+                        sent+=len(block)
+                        progress(sent, size)
                     try:
-                        ret=self.g_ftp.storbinary("STOR "+toname, f)
+                        ret=self.g_ftp.storbinary("STOR "+toname, f, callback=Sent if progress is not None else None)
                         self.Log(ret)
                         if not self.IsSuccess(ret):
                             Log(f"FTP.PutFile('{toname}'): server did not report success: {ret}", isError=True)
